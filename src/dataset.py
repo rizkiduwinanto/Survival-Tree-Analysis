@@ -5,13 +5,15 @@ from sklearn.model_selection import train_test_split
 
 np.random.seed(42) 
 
-class Dataset:
-    def __init__(self, data, impute_rest=True):
+class SupportDataset():
+    def __init__(self, data, impute_rest=True, convert_bool=True, is_scikit=False):
         self.data = data
-        self.preprocess(impute_rest)
-        self.label = self.create_label()
+        self.preprocess(impute_rest, convert_bool)
+        self.label = self.create_label(is_scikit)
 
-    def create_label(self):
+        self.data = self.data[['age', 'num.co']]
+
+    def create_label(self, is_scikit):
         self.data["death"] = self.data["death"].astype('bool')
         label = self.data[["death", "d.time"]]
         record = label.to_records(index=False)
@@ -21,11 +23,14 @@ class Dataset:
 
         return structured_arr
 
-    def preprocess(self, impute_rest):
+    def preprocess(self, impute_rest, convert_bool):
         self.impute_values(impute_rest)
         self.drop_values()
         self.data.dropna(axis=1, inplace=True)
-        self.convert_to_one_hot()
+        # self.convert_to_one_hot()
+
+        if convert_bool:
+            self.convert_bool_to_int()
 
         # self.data = self.data[self.data["death"] ==1]
 
@@ -58,6 +63,11 @@ class Dataset:
             "charges",
             "totcst",
             "totmcst",
+
+            "sex",
+            "dzgroup",
+            "dzclass",
+            "ca",
         ]
 
         self.data.drop(TO_DROP, axis=1, inplace=True)
@@ -74,6 +84,9 @@ class Dataset:
             # "income"
         ]
         self.data = pd.get_dummies(self.data, columns=TO_CONVERT)
+
+    def convert_bool_to_int(self):
+        self.data.replace({False: 0, True: 1}, inplace=True)
     
     def get_label(self):
         return self.label
