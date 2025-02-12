@@ -1,19 +1,19 @@
 // AFT Survival Tree
 digraph {
-	"1626e62a-99fd-4fc7-abb9-5c6d0078f679" [label="X_0 <= 0.7 
- loss = 2817.05 
- num_sample = 300" shape=rectangle]
-	"fcd4401c-4b12-439d-ba4d-3a2f5db4d368" [label="X_0 <= 0.16 
- loss = 2078.91 
- num_sample = 211" shape=rectangle]
-	"69470b3c-904a-4a50-8be7-db862cfa0c32" [label="value: 45.477 
- num_sample = 44" shape=rectangle]
-	"fcd4401c-4b12-439d-ba4d-3a2f5db4d368" -> "69470b3c-904a-4a50-8be7-db862cfa0c32"
-	"8854ef78-465c-411b-a99f-2de6e9391cda" [label="value: 50.784 
- num_sample = 167" shape=rectangle]
-	"fcd4401c-4b12-439d-ba4d-3a2f5db4d368" -> "8854ef78-465c-411b-a99f-2de6e9391cda"
-	"1626e62a-99fd-4fc7-abb9-5c6d0078f679" -> "fcd4401c-4b12-439d-ba4d-3a2f5db4d368"
-	"88a743ae-3dfc-406a-bcf7-67b11716b655" [label="value: 49.73 
- num_sample = 89" shape=rectangle]
-	"1626e62a-99fd-4fc7-abb9-5c6d0078f679" -> "88a743ae-3dfc-406a-bcf7-67b11716b655"
+	"b3423d88-5c8a-4b27-9032-7946309734d5" [label="X_1 <= 4.5 
+ loss = 6780.19 
+ num_sample = 800" shape=rectangle]
+	"661d7797-4d0f-442b-a035-8a665000f22c" [label="X_10 <= 18.5 
+ loss = 6610.5 
+ num_sample = 785" shape=rectangle]
+	"c14a1306-4323-4801-afee-51ec8b74d504" [label="value: 591.888 
+ num_sample = 197" shape=rectangle]
+	"661d7797-4d0f-442b-a035-8a665000f22c" -> "c14a1306-4323-4801-afee-51ec8b74d504"
+	"478cc2c0-8d4a-413d-b36d-da470a1d134a" [label="value: 561.526 
+ num_sample = 588" shape=rectangle]
+	"661d7797-4d0f-442b-a035-8a665000f22c" -> "478cc2c0-8d4a-413d-b36d-da470a1d134a"
+	"b3423d88-5c8a-4b27-9032-7946309734d5" -> "661d7797-4d0f-442b-a035-8a665000f22c"
+	"09b488ac-8427-46d3-8421-f5f7a3abf3d0" [label="value: 459.4 
+ num_sample = 15" shape=rectangle]
+	"b3423d88-5c8a-4b27-9032-7946309734d5" -> "09b488ac-8427-46d3-8421-f5f7a3abf3d0"
 }

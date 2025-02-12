@@ -7,11 +7,12 @@ np.random.seed(42)
 
 class SupportDataset():
     def __init__(self, data, impute_rest=True, convert_bool=True, is_scikit=False):
-        self.data = data
+        self.data = data.copy()
+
         self.preprocess(impute_rest, convert_bool)
         self.label = self.create_label(is_scikit)
 
-        self.data = self.data[['age', 'num.co']]
+        self.data = self.data.to_numpy()
 
     def create_label(self, is_scikit):
         self.data["death"] = self.data["death"].astype('bool')
@@ -27,7 +28,7 @@ class SupportDataset():
         self.impute_values(impute_rest)
         self.drop_values()
         self.data.dropna(axis=1, inplace=True)
-        # self.convert_to_one_hot()
+        self.convert_to_one_hot()
 
         if convert_bool:
             self.convert_bool_to_int()
@@ -63,11 +64,6 @@ class SupportDataset():
             "charges",
             "totcst",
             "totmcst",
-
-            "sex",
-            "dzgroup",
-            "dzclass",
-            "ca",
         ]
 
         self.data.drop(TO_DROP, axis=1, inplace=True)

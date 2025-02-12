@@ -8,17 +8,11 @@ from lifelines.utils import concordance_index
 import graphviz
 import uuid
 
-## To Do:
-## Check XGboost examples
-## Graphviz
-## Survival Tree
-## Pruning
-
 class AFTSurvivalTree():
     """
         Regression tree that implements AFTLoss
     """
-    def __init__(self, max_depth=5, min_samples_split=10, min_samples_leaf=10, sigma=0.5, function="norm", is_parallel=True):
+    def __init__(self, max_depth=5, min_samples_split=5, min_samples_leaf=5, sigma=0.5, function="norm", is_parallel=False):
         self.tree = None
         self.max_depth = (2**31) - 1 if max_depth is None else max_depth
 
@@ -41,26 +35,29 @@ class AFTSurvivalTree():
             
         if self.is_parallel:
             num_cores = multiprocessing.cpu_count()
-            results = Parallel(n_jobs=num_cores)(delayed(self.get_best_split_parallel)(X, y, feature) for feature in X.shape[1])
+            results = Parallel(n_jobs=num_cores)(delayed(self.get_best_split_parallel)(X, y, feature) for feature in range(len(X[0])))
             best_result = min(results, key=lambda x: x[4])
             split, feature, left_indices, right_indices, loss = best_result
         else:
             split, feature, left_indices, right_indices, loss = self.get_best_split(X, y)
 
-        if left_indices is None or right_indices is None:
+        X_left, y_left = X[left_indices], y[left_indices]
+        X_right, y_right = X[right_indices], y[right_indices]
+
+        if len(y_left) == 0 or len(y_right) == 0:
             node = TreeNode(None, None, self.mean_y(y), None, None, num_sample=len(y))
             if depth == 0: 
                 self.tree = node
             return node
 
-        if len(left_indices[0]) < self.min_samples_leaf or len(right_indices[0]) < self.min_samples_leaf:
+        if len(X_left) < self.min_samples_leaf or len(X_right) < self.min_samples_leaf:
             node = TreeNode(feature, None, self.mean_y(y), None, None, num_sample=len(y))
             if depth == 0:
                 self.tree = node
             return node
 
-        left = self.build_tree(X[left_indices], y[left_indices], depth+1)
-        right = self.build_tree(X[right_indices], y[right_indices], depth+1)
+        left = self.build_tree(X_left, y_left, depth+1)
+        right = self.build_tree(X_right, y_right, depth+1)
     
         node = TreeNode(feature, split, None, left, right, loss=loss, num_sample=len(y))
         if depth == 0:
@@ -74,41 +71,18 @@ class AFTSurvivalTree():
         best_right_indices = None
         best_loss = np.inf
 
-        for split in np.unique(X[:, feature]):
-            left_indices = np.where(X[:, feature] <= split)
-            right_indices = np.where(X[:, feature] > split)
+        sorted_indices = np.argsort(X[:, feature])
+        sorted_X = X[sorted_indices, feature]
+        sorted_y = y[sorted_indices]
 
-            left_y = y[left_indices]
-            right_y = y[right_indices]
+        n_samples = len(X)
 
-            left_loss = self.calculate_loss(left_y)
-            right_loss = self.calculate_loss(right_y)
+        for i in range(n_samples - 1):
+            if sorted_X[i] != sorted_X[i+1]:
+                split = (sorted_X[i] + sorted_X[i+1]) / 2
 
-            total_loss = left_loss + right_loss
-
-            if total_loss < best_loss:
-                best_loss = total_loss
-                best_split = split
-                best_feature = feature
-                best_left_indices = left_indices
-                best_right_indices = right_indices
-
-        return best_split, best_feature, best_left_indices, best_right_indices, best_loss
-
-    def get_best_split(self, X, y):
-        best_split = None
-        best_feature = None
-        best_left_indices = None
-        best_right_indices = None
-        best_loss = np.inf
-
-        for feature in range(X.shape[1]):
-            for split in np.unique(X[:, feature]):
-                left_indices = np.where(X[:, feature] <= split)
-                right_indices = np.where(X[:, feature] > split)
-
-                left_y = y[left_indices]
-                right_y = y[right_indices]
+                left_y = sorted_y[:i]
+                right_y = sorted_y[i:]
 
                 left_loss = self.calculate_loss(left_y)
                 right_loss = self.calculate_loss(right_y)
@@ -119,8 +93,45 @@ class AFTSurvivalTree():
                     best_loss = total_loss
                     best_split = split
                     best_feature = feature
-                    best_left_indices = left_indices
-                    best_right_indices = right_indices
+                    best_left_indices = sorted_indices[:i]
+                    best_right_indices = sorted_indices[i:]
+
+        return best_split, best_feature, best_left_indices, best_right_indices, best_loss
+
+    def get_best_split(self, X, y):
+        best_split = None
+        best_feature = None
+        best_left_indices = None
+        best_right_indices = None
+        best_loss = np.inf
+
+        n_samples, n_features = len(X), len(X[0])
+
+        for feature in range(n_features):
+            sorted_indices = np.argsort(X[:, feature])
+            sorted_X = X[sorted_indices, feature]
+            sorted_y = y[sorted_indices]
+
+            for i in range(n_samples - 1):
+                if sorted_X[i] != sorted_X[i+1]:
+                    split = (sorted_X[i] + sorted_X[i+1]) / 2
+
+                    left_y = sorted_y[:i]
+                    right_y = sorted_y[i:]
+
+                    mean_y = self.mean_y(y)
+
+                    left_loss = self.calculate_loss(left_y, mean_y)
+                    right_loss = self.calculate_loss(right_y, mean_y)
+
+                    total_loss = left_loss + right_loss
+
+                    if total_loss < best_loss:
+                        best_loss = total_loss
+                        best_split = split
+                        best_feature = feature
+                        best_left_indices = sorted_indices[:i]
+                        best_right_indices = sorted_indices[i:]
 
         return best_split, best_feature, best_left_indices, best_right_indices, best_loss
 
@@ -167,6 +178,8 @@ class AFTSurvivalTree():
     def predict(self, X):
         if self.tree is None:
             raise ValueError("Tree has not been built. Call `fit` first.")
+        if isinstance(X, np.ndarray) and len(X.shape) == 1:
+            X = X.reshape(1, -1)
         predictions = [self.get_prediction(x, self.tree) for x in X]
         return predictions
 
