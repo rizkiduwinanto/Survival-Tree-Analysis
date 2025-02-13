@@ -12,7 +12,7 @@ class AFTSurvivalTree():
     """
         Regression tree that implements AFTLoss
     """
-    def __init__(self, max_depth=5, min_samples_split=5, min_samples_leaf=5, sigma=0.5, function="norm", is_parallel=False):
+    def __init__(self, max_depth=5, min_samples_split=5, min_samples_leaf=5, sigma=0.5, function="norm"):
         self.tree = None
         self.max_depth = (2**31) - 1 if max_depth is None else max_depth
 
@@ -21,7 +21,6 @@ class AFTSurvivalTree():
         self.sigma = sigma 
         self.epsilon = 10e-12
         self.function = function
-        self.is_parallel = is_parallel
 
     def fit(self, X, y):
         self.build_tree(X, y)
@@ -33,14 +32,8 @@ class AFTSurvivalTree():
                 self.tree = node
             return node
             
-        if self.is_parallel:
-            num_cores = multiprocessing.cpu_count()
-            results = Parallel(n_jobs=num_cores)(delayed(self.get_best_split_parallel)(X, y, feature) for feature in range(len(X[0])))
-            best_result = min(results, key=lambda x: x[4])
-            split, feature, left_indices, right_indices, loss = best_result
-        else:
-            split, feature, left_indices, right_indices, loss = self.get_best_split(X, y)
-
+        split, feature, left_indices, right_indices, loss = self.get_best_split(X, y)
+        
         X_left, y_left = X[left_indices], y[left_indices]
         X_right, y_right = X[right_indices], y[right_indices]
 
@@ -63,40 +56,6 @@ class AFTSurvivalTree():
         if depth == 0:
             self.tree = node
         return node
-
-    def get_best_split_parallel(self, X, y, feature):
-        best_split = None
-        best_feature = None
-        best_left_indices = None
-        best_right_indices = None
-        best_loss = np.inf
-
-        sorted_indices = np.argsort(X[:, feature])
-        sorted_X = X[sorted_indices, feature]
-        sorted_y = y[sorted_indices]
-
-        n_samples = len(X)
-
-        for i in range(n_samples - 1):
-            if sorted_X[i] != sorted_X[i+1]:
-                split = (sorted_X[i] + sorted_X[i+1]) / 2
-
-                left_y = sorted_y[:i]
-                right_y = sorted_y[i:]
-
-                left_loss = self.calculate_loss(left_y)
-                right_loss = self.calculate_loss(right_y)
-
-                total_loss = left_loss + right_loss
-
-                if total_loss < best_loss:
-                    best_loss = total_loss
-                    best_split = split
-                    best_feature = feature
-                    best_left_indices = sorted_indices[:i]
-                    best_right_indices = sorted_indices[i:]
-
-        return best_split, best_feature, best_left_indices, best_right_indices, best_loss
 
     def get_best_split(self, X, y):
         best_split = None

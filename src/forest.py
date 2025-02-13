@@ -8,10 +8,9 @@ class AFTForest():
     """
         Survival Regression Forest for AFTLoss
     """
-    def __init__(self, n_trees=10, random_params=True, percent_len_sample=0.8, is_parallel=True, **kwargs):
+    def __init__(self, n_trees=10, random_params=True, percent_len_sample=0.8, **kwargs):
         self.random_params = random_params
         self.percent_len_sample = percent_len_sample
-        self.is_parallel = is_parallel
 
         if random_params:
             self.trees = [
@@ -30,19 +29,14 @@ class AFTForest():
             "min_samples_split": np.random.randint(1, 10),
             "min_samples_leaf": np.random.randint(1, 10),
             "sigma": np.random.uniform(0, 1),
-            "function": np.random.choice(['norm', 'logistic', 'extreme']),
-            "is_parallel": False
+            "function": np.random.choice(['norm', 'logistic', 'extreme'])
         }
 
     def fit(self, X, y):
-        if self.is_parallel:
-            num_cores = multiprocessing.cpu_count()
-            results = Parallel(n_jobs=num_cores)(delayed(tree.fit)(X, y) for tree in self.trees)
-        else:
-            for tree in self.trees:
-                len_sample = int(np.round(len(X) * self.percent_len_sample))
-                X_sample, y_sample = self.sample(X, y, len_sample)
-                tree.fit(X, y)
+        for tree in self.trees:
+            len_sample = int(np.round(len(X) * self.percent_len_sample))
+            X_sample, y_sample = self.sample(X, y, len_sample)
+            tree.fit(X, y)
 
     def sample(self, X, y, len_sample):
         indices = np.random.choice(len(X), len_sample, replace=True)
@@ -64,8 +58,7 @@ class AFTForest():
     def _score(self, X, y_true):
         times_pred = self.predict(X)
         event_true = [1 if not censored else 0 for censored, _ in y_true]
-        times_true = [time for _, time in y_true]
-        print(times_true, times_pred, event_true)
+        times_true = [time for _, time in y_true]\
 
         c_index = concordance_index(times_true, times_pred, event_true)
         return c_index
