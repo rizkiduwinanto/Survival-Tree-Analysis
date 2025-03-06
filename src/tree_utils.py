@@ -1,8 +1,6 @@
 import numba as nb
 from utils import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
 
-@nb.jit(nopython=True)
-@vectorize(['float64(float64, float64)'])
 def _get_best_split(self, X, y):
     best_split = None
     best_feature = None
@@ -40,7 +38,6 @@ def _get_best_split(self, X, y):
 
     return best_split, best_feature, best_left_indices, best_right_indices, best_loss
 
-@nb.jit(nopython=True)
 def _calculate_loss(self, y, pred=None):
     if pred is None:
         pred = self.mean_y(y)
@@ -54,7 +51,6 @@ def _calculate_loss(self, y, pred=None):
             loss += self.get_uncensored_value(value, pred)
     return loss
 
-@nb.jit(nopython=True)
 def _get_uncensored_value(self, y, pred):
     if self.function == "norm":
         pdf = norm_pdf(y, pred, self.sigma)
@@ -67,7 +63,6 @@ def _get_uncensored_value(self, y, pred):
         pdf = self.epsilon
     return -np.log(pdf/(self.sigma*y))
 
-@nb.jit(nopython=True)
 def _get_censored_value(self, y_lower, y_upper, pred):
     if self.function == "norm":
         cdf_diff = norm_cdf(y_upper, pred, self.sigma) - norm_cdf(y_lower, pred, self.sigma)
@@ -80,6 +75,5 @@ def _get_censored_value(self, y_lower, y_upper, pred):
         cdf_diff = self.epsilon
     return -np.log(cdf_diff)
 
-@nb.jit(nopython=True)
 def _mean_y(self, y):
     return np.mean([value for _, value in y])

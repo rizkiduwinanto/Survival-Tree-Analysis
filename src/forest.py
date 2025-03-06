@@ -23,13 +23,16 @@ class AFTForest():
 
         self.n_trees = n_trees
 
+    # Tuning search for hyperparameters 
     def _get_params(self):
         return {
             "max_depth": np.random.randint(1, 10),
             "min_samples_split": np.random.randint(1, 10),
             "min_samples_leaf": np.random.randint(1, 10),
             "sigma": np.random.uniform(0, 1),
-            "function": np.random.choice(['norm', 'logistic', 'extreme'])
+            "function": np.random.choice(['norm', 'logistic', 'extreme']),
+            "is_custom_dist": False,
+            "is_bootstrap": False
         }
 
     def fit(self, X, y):

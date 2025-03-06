@@ -3,7 +3,8 @@ import math
 from joblib import Parallel, delayed
 import multiprocessing
 from node import TreeNode
-from utils import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
+from distribution import Weibull, LogLogistic, LogNormal, LogExtreme, GMM
+from math_utils import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
 from lifelines.utils import concordance_index
 import graphviz
 import uuid
@@ -12,7 +13,16 @@ class AFTSurvivalTree():
     """
         Regression tree that implements AFTLoss
     """
-    def __init__(self, max_depth=5, min_samples_split=5, min_samples_leaf=5, sigma=0.5, function="norm"):
+    def __init__(
+        self, 
+        max_depth=5, 
+        min_samples_split=5, 
+        min_samples_leaf=5,
+        sigma=0.5, 
+        function="norm", 
+        is_custom_dist=False,
+        is_bootstrap=False
+    ):
         self.tree = None
         self.max_depth = (2**31) - 1 if max_depth is None else max_depth
 
@@ -21,8 +31,29 @@ class AFTSurvivalTree():
         self.sigma = sigma 
         self.epsilon = 10e-12
         self.function = function
+        self.custom_dist = None
+        self.is_bootstrap = is_bootstrap
+
+        if is_custom_dist:
+            if function == "weibull":
+                self.custom_dist = Weibull()
+            elif function == "logistic":
+                self.custom_dist = LogLogistic()
+            elif function == "norm":
+                self.custom_dist = LogNormal()
+            elif function == "extreme":
+                self.custom_dist = LogExtreme()
+            elif function == "gmm":
+                self.custom_dist = GMM()
+            else:
+                raise ValueError("Custom distribution not supported")
 
     def fit(self, X, y):
+        if self.custom_dist is not None:
+            if self.is_bootstrap:
+                self.custom_dist.fit_bootstrap(y)
+            else:
+                self.custom_dist.fit(y)
         self.build_tree(X, y)
 
     def build_tree(self, X, y, depth=0):    
@@ -108,24 +139,33 @@ class AFTSurvivalTree():
         return loss
     
     def get_uncensored_value(self, y, pred):
-        if self.function == "norm":
-            pdf = norm_pdf(y, pred, self.sigma)
-        elif self.function == "logistic":
-            pdf = logistic_pdf(y, pred, self.sigma)
+        if self.custom_dist is not None:
+            link_function = np.log(y) - pred
+            pdf = self.custom_dist.pdf(link_function)
         else:
-            pdf = extreme_pdf(y, pred, self.sigma)
+            if self.function == "norm":
+                pdf = norm_pdf(y, pred, self.sigma)
+            elif self.function == "logistic":
+                pdf = logistic_pdf(y, pred, self.sigma)
+            else:
+                pdf = extreme_pdf(y, pred, self.sigma)
 
         if pdf <= 0:
             pdf = self.epsilon
         return -np.log(pdf/(self.sigma*y))
 
     def get_censored_value(self, y_lower, y_upper, pred):
-        if self.function == "norm":
-            cdf_diff = norm_cdf(y_upper, pred, self.sigma) - norm_cdf(y_lower, pred, self.sigma)
-        elif self.function == "logistic":
-            cdf_diff = logistic_cdf(y_upper, pred, self.sigma) - logistic_cdf(y_lower, pred, self.sigma)
+        if self.custom_dist is not None:
+            link_function_lower = np.log(y_lower) - pred
+            link_function_upper = np.log(y_upper) - pred
+            cdf_diff = self.custom_dist.cdf(link_function_upper) - self.custom_dist.cdf(link_function_lower)
         else:
-            cdf_diff = extreme_cdf(y_upper, pred, self.sigma) - extreme_cdf(y_lower, pred, self.sigma)
+            if self.function == "norm":
+                cdf_diff = norm_cdf(y_upper, pred, self.sigma) - norm_cdf(y_lower, pred, self.sigma)
+            elif self.function == "logistic":
+                cdf_diff = logistic_cdf(y_upper, pred, self.sigma) - logistic_cdf(y_lower, pred, self.sigma)
+            else:
+                cdf_diff = extreme_cdf(y_upper, pred, self.sigma) - extreme_cdf(y_lower, pred, self.sigma)
 
         if cdf_diff <= 0:
             cdf_diff = self.epsilon
