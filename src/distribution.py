@@ -56,6 +56,20 @@ class Distribution():
         """
         pass
 
+    @abstractmethod
+    def get_params(self):
+        """
+        Get the parameters of the distribution
+        """
+        pass
+
+    @abstractmethod
+    def set_params(self, params):
+        """
+        Set the parameters of the distribution
+        """
+        pass
+
 class Weibull(Distribution):
     """
     Class to define the Weibull distribution
@@ -124,12 +138,29 @@ class Weibull(Distribution):
         """
         return weibull_min.cdf(x, self.rho_, loc=0, scale=self.lambda_)
 
+    def get_params(self):
+        """
+        Get the parameters of the distribution
+        """
+        params = {
+            'rho': self.rho_,
+            'lambda': self.lambda_
+        }
+
+        return params
+
+    def set_params(self, params):
+        """
+        Set the parameters of the distribution
+        """
+        self.rho_ = params['rho']
+        self.lambda_ = params['lambda']
 
 class GMM(Distribution):
     """
     Class to define the Gaussian Mixture Model
     """
-    def __init__(self, n_components=2):
+    def __init__(self, n_components=10):
         super().__init__()
         self.n_components = n_components
 
@@ -218,16 +249,38 @@ class GMM(Distribution):
         """
         Compute the cumulative density function
         """
-        cdf = 0
+        cdf_value = 0.0
         for mean, cov, weight in zip(self.means_, self.covariances_, self.weights_):
-            cdf += weight * norm.cdf(x, mean, np.sqrt(cov))
-        return cdf
+            std_dev = np.sqrt(cov)
+            cdf_value += weight * norm.cdf(x, loc=mean, scale=std_dev)
+        return cdf_value
 
     def cdf(self, x):
         """
         Compute the cumulative density function
         """
         return self.mix_norm_cdf(x)
+
+    def get_params(self):
+        """
+        Get the parameters of the distribution
+        """
+        params = {
+            'means': self.means_.tolist(),
+            'covariances': self.covariances_.tolist(),
+            'weights': self.weights_.tolist(),
+            'n_components': self.n_components
+        }
+        return params
+
+    def set_params(self, params):
+        """
+        Set the parameters of the distribution
+        """
+        self.means_ = np.array(params['means'])
+        self.covariances_ = np.array(params['covariances'])
+        self.weights_ = np.array(params['weights'])
+        self.n_components = params['n_components']
 
 class LogNormal(Distribution):
     """
@@ -297,6 +350,24 @@ class LogNormal(Distribution):
         """
         return lognorm.cdf(x, self.sigma_, loc=0, scale=np.exp(self.mu_))
 
+    def get_params(self):
+        """
+        Get the parameters of the distribution
+        """
+        params = {
+            'mu': self.mu_,
+            'sigma': self.sigma_
+        }
+
+        return params
+
+    def set_params(self, params):
+        """
+        Set the parameters of the distribution
+        """
+        self.mu_ = params['mu']
+        self.sigma_ = params['sigma']
+
 class LogLogistic(Distribution):
     """
     Class to define the log-logistic distribution
@@ -365,6 +436,24 @@ class LogLogistic(Distribution):
         """
         return fisk.cdf(x, self.alpha_, loc=0, scale=self.beta_)
 
+    def get_params(self):
+        """
+        Get the parameters of the distribution
+        """
+        params = {
+            'alpha': self.alpha_,
+            'beta': self.beta_
+        }
+
+        return params
+
+    def set_params(self, params):
+        """
+        Set the parameters of the distribution
+        """
+        self.alpha_ = params['alpha']
+        self.beta_ = params['beta']
+
 class LogExtreme(Distribution):
     """
     Class to define the log-extreme (not with lifelines)
@@ -399,7 +488,7 @@ class LogExtreme(Distribution):
 
             resampled_times, resampled_events = self.unpack_data(resampled_y)
 
-            loc, scale = self._fit(times, events)
+            loc, scale = self._fit(resampled_times, resampled_events)
 
             bootstrap_scales.append(scale)
 
@@ -425,6 +514,22 @@ class LogExtreme(Distribution):
         Compute the cumulative density function
         """
         return gumbel_r.cdf(x, loc=0, scale=self.scale_)
+
+    def get_params(self):
+        """
+        Get the parameters of the distribution
+        """
+        params = {
+            'scale': self.scale_
+        }
+
+        return params
+
+    def set_params(self, params):
+        """
+        Set the parameters of the distribution
+        """
+        self.scale_ = params['scale']
 
 
 
