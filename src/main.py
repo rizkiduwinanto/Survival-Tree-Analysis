@@ -27,9 +27,11 @@ def run(args):
     if dataset.lower() == "veteran":
         df = pd.read_csv('data/veterans_lung_cancer.csv')
         data = VeteranLungDataset(df)
-    elif dataset.lower == "support":
+    elif dataset.lower() == "support":
         df = pd.read_csv('data/support2.csv')
         data = SupportDataset(df)
+    else:
+        raise ValueError("Dataset not found")
     
     X_train, X_test, y_train, y_test = data.get_train_test()
 
