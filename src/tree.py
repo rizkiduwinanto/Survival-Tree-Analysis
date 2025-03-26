@@ -9,7 +9,6 @@ from lifelines.utils import concordance_index
 import graphviz
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-import numba as nb
 import json
 from sklearn.model_selection import train_test_split
 from sksurv.metrics import integrated_brier_score
@@ -37,7 +36,7 @@ class AFTSurvivalTree():
         self.min_samples_leaf = min_samples_leaf
         self.sigma = sigma 
         self.epsilon = 10e-12
-        self.function = function
+        self.function = function.lower()
         self.custom_dist = None
         self.is_bootstrap = is_bootstrap
         self.is_custom_dist = is_custom_dist
@@ -79,6 +78,12 @@ class AFTSurvivalTree():
             return node
             
         split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X, y)
+
+        if split is None and feature is None:
+            node = TreeNode(None, None, self.mean_y(y), None, None, num_sample=len(y))
+            if depth == 0: 
+                self.tree = node
+            return node
         
         X_left, y_left = X[left_indices], y[left_indices]
         X_right, y_right = X[right_indices], y[right_indices]
@@ -173,14 +178,14 @@ class AFTSurvivalTree():
         n_samples = len(X)
         n_features = len(X[0])
 
+        mean_y = self.mean_y(y)
+
         for feature in range(n_features):
             unique_values = np.unique(X[:, feature])
             thresholds = unique_values[:, np.newaxis]
 
             left_mask = X[:, feature][np.newaxis, :] < thresholds
             right_mask = X[:, feature][np.newaxis, :] >= thresholds
-
-            mean_y = self.mean_y(y)
 
             valid_splits = np.logical_and(np.any(left_mask, axis=1), np.any(right_mask, axis=1))
             thresholds = thresholds[valid_splits]
@@ -272,14 +277,17 @@ class AFTSurvivalTree():
         return predictions
 
     def get_prediction(self, X, tree):
-        if tree.value is not None:
-            return tree.value
-        else:
-            feature_value = X[tree.feature_index]
-            if feature_value <= tree.threshold:
-                return self.get_prediction(X, tree.left)
+        try:
+            if tree.value is not None:
+                return tree.value
             else:
-                return self.get_prediction(X, tree.right)
+                feature_value = X[tree.feature_index]
+                if feature_value <= tree.threshold:
+                    return self.get_prediction(X, tree.left)
+                else:
+                    return self.get_prediction(X, tree.right)
+        except:
+            raise ValueError("Error in get_prediction")
 
     def _print(self):
         if self.tree is None:

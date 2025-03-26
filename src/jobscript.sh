@@ -15,7 +15,7 @@ cp -R /home4/$USER/UDL-Project $TMPDIR/UDL-Project
 cd $TMPDIR/UDL-Project
 
 # Run the training
-/home4/$USER/venvs/udl_envs/bin/python3 $TMPDIR/UDL-Project/src/main_lm_finetune.py &
+/home4/$USER/venvs/udl_envs/bin/python3 $TMPDIR/UDL-Project/src/main.py &
 wait
 
 mkdir -p /home4/$USER/job_${SLURM_JOBID}
