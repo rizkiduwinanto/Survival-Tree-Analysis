@@ -12,7 +12,8 @@ class Distribution():
     def __init__(self):
         self.y = None
 
-    def unpack_data(self, y):
+    @staticmethod
+    def unpack_data(y):
         """
         Load the data
         """
@@ -68,7 +69,7 @@ class Distribution():
         """
         Set the parameters of the distribution
         """
-        pass
+        pass 
 
 class Weibull(Distribution):
     """
