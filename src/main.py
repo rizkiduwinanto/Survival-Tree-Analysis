@@ -36,12 +36,19 @@ def run(args):
     X_train, X_test, y_train, y_test = data.get_train_test()
 
     if type_algo.lower() == "aftforest":
-        kwargs = {
-            "function": function.lower(), 
-            "is_bootstrap": is_bootstrap, 
-            "is_custom_dist": is_custom_dist,
-            "n_components": 2
-        }
+        if function.lower() != "random":
+            kwargs = {
+                "is_bootstrap": is_bootstrap, 
+                "is_custom_dist": is_custom_dist,
+                "n_components": 2
+            }
+        else:
+            kwargs = {
+                "function": function.lower(), 
+                "is_bootstrap": is_bootstrap, 
+                "is_custom_dist": is_custom_dist,
+                "n_components": 2
+            }
 
         aft_forest = AFTForest(n_trees= n_trees, random_params=False, **kwargs)
 
@@ -56,7 +63,12 @@ def run(args):
         aft_forest.save(path_to_save)
 
     elif type_algo.lower() == "aftsurvivaltree":
-        aft_tree = AFTSurvivalTree()
+        aft_tree = AFTSurvivalTree(
+            function=function.lower(), 
+            is_bootstrap=is_bootstrap, 
+            is_custom_dist=is_custom_dist,
+            n_components=2
+        )
         start = time.time()
         aft_tree.fit(X_train, y_train)
         end = time.time()
