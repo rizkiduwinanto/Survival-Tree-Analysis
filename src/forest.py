@@ -6,6 +6,10 @@ import multiprocessing
 from tree import AFTSurvivalTree
 from lifelines.utils import concordance_index
 from sksurv.metrics import integrated_brier_score
+from tqdm import tqdm
+import os
+
+MAIN_FOLDER = "models/forest"
 
 np.random.seed(42)
 
@@ -41,9 +45,10 @@ class AFTForest():
         return args
 
     def fit(self, X, y):
-        self.trees = Parallel(n_jobs=multiprocessing.cpu_count())(
-            delayed(self._fit_tree)(tree, X, y) for tree in self.trees
-        )
+        self.trees = list(tqdm(Parallel(n_jobs=multiprocessing.cpu_count())(
+            delayed(self._fit_tree)(self.trees[idx], X, y) for idx in range(len(self.trees))),
+            total=self.n_trees
+        ))
 
     def _fit_tree(self, tree, X, y):
         len_sample = int(np.round(len(X) * self.percent_len_sample))
@@ -91,20 +96,39 @@ class AFTForest():
         return ibs
 
     def save(self, path):
+        if not os.path.exists(MAIN_FOLDER):
+            os.makedirs(MAIN_FOLDER)
+
+        new_path = os.path.join(MAIN_FOLDER, path)
+        os.makedirs(new_path, exist_ok=True)
+
         forest_state = {
             'n_trees': self.n_trees,
             'percent_len_sample': self.percent_len_sample
         }
+
+        metadata_path = os.path.join(new_path, "_metadata.json")
         
-        with open(path + "_metadata.json", 'w') as f:
+        with open(metadata_path, 'w') as f:
             json.dump(forest_state, f, indent=4)
         
         for i, tree in enumerate(self.trees):
-            tree.save(path + "_tree{}.json".format(i))
+            tree_path = os.path.join(new_path, "_tree{}.json".format(i))
+            tree.save(tree_path)
 
+        return new_path
+            
     @classmethod
     def load(cls, path):
-        with open(path + "_metadata.json", 'r') as f:
+        """
+            Load a forest from a path
+        """
+
+        metadata_path = os.path.join(path, "_metadata.json")
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError("The metadata file does not exist in the specified path.")
+
+        with open(metadata_path, 'r') as f:
             forest_state = json.load(f)
         
         forest = cls(
@@ -114,7 +138,9 @@ class AFTForest():
         
         forest.trees = []
         for i in range(forest_state['n_trees']):
-            tree = AFTSurvivalTree.load(path + "_tree{}.json".format(i))
+            tree_path = os.path.join(path, "_tree{}.json".format(i))
+            
+            tree = AFTSurvivalTree.load(tree_path)
             forest.trees.append(tree)
         
         return forest

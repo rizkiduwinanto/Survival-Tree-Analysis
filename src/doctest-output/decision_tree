@@ -1,12 +1,12 @@
 // AFT Survival Tree
 digraph {
-	"76d05b22-7438-4f8b-ae08-80481468757c" [label="X_1 <= 60.0 
+	"e9bf0577-eb95-4b34-b17d-4bcbfc72b208" [label="X_1 <= 60.0 
  loss = 1069.8 
  num_sample = 109" shape=rectangle]
-	"ae0b9539-308e-4901-90da-672f392a30fc" [label="value: 56.025 
+	"6509614a-9a02-4b66-9ab6-8011f0a54703" [label="value: 56.025 
  num_sample = 40" shape=rectangle]
-	"76d05b22-7438-4f8b-ae08-80481468757c" -> "ae0b9539-308e-4901-90da-672f392a30fc"
-	"b114bc4b-6261-422a-8981-f8468aa33803" [label="value: 157.667 
+	"e9bf0577-eb95-4b34-b17d-4bcbfc72b208" -> "6509614a-9a02-4b66-9ab6-8011f0a54703"
+	"c19d4d3d-0447-41bd-842f-875ffb23562e" [label="value: 157.667 
  num_sample = 69" shape=rectangle]
-	"76d05b22-7438-4f8b-ae08-80481468757c" -> "b114bc4b-6261-422a-8981-f8468aa33803"
+	"e9bf0577-eb95-4b34-b17d-4bcbfc72b208" -> "c19d4d3d-0447-41bd-842f-875ffb23562e"
 }
