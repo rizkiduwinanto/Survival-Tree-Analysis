@@ -86,8 +86,8 @@ if __name__ == "__main__":
     parser.add_argument('--path', type=str, help='Path to save tree')
     parser.add_argument('--n_trees', type=int, help='Number of trees')
     parser.add_argument('--function', type=str, help='Function')
-    parser.add_argument('--is_bootstrap', type=bool, help='Is bootstrap')
-    parser.add_argument('--is_custom_dist', type=bool, help='Is custom distribution')
+    parser.add_argument('--is_bootstrap', action=argparse.BooleanOptionalAction, help='Is bootstrap')
+    parser.add_argument('--is_custom_dist', action=argparse.BooleanOptionalAction, help='Is custom distribution')
 
     args = parser.parse_args()
 
