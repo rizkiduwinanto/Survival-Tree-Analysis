@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 
 from sklearn.model_selection import train_test_split
+import shap
 
 np.random.seed(42) 
 
@@ -152,6 +153,16 @@ class VeteranLungDataset():
 
     def get_data(self):
         return self.data
+
+class NHANES():
+    def __init__(self):
+        pass
+    
+    def create_label(self):
+        pass
+
+    def preprocess(self):
+        pass
 
 class SyntheticDataset:
     def __init__(self, n_censored, n_uncensored, n_feature=2):

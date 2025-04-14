@@ -13,8 +13,13 @@ def run(args):
     path_to_save = args[2]
     n_trees = args[3]
     function = args[4]
-    is_bootstrap = args[5]
-    is_custom_dist = args[6]
+    n_components = args[5]
+    max_depth = args[6]
+    min_samples_split = args[7]
+    min_samples_leaf = args[8]
+    sigma = args[9]
+    is_bootstrap = args[10]
+    is_custom_dist = args[11]
 
     print("Type: ", type_algo)
     print("Dataset: ", dataset)
@@ -23,6 +28,11 @@ def run(args):
     print("Function: ", function)
     print("Is bootstrap: ", is_bootstrap)
     print("Is custom dist: ", is_custom_dist)
+    print("Number of components: ", n_components)
+    print("Max depth: ", max_depth)
+    print("Min samples split: ", min_samples_split)
+    print("Min samples leaf: ", min_samples_leaf)
+    print("Sigma: ", sigma)
 
     if dataset.lower() == "veteran":
         df = pd.read_csv('data/veterans_lung_cancer.csv')
@@ -40,14 +50,18 @@ def run(args):
             kwargs = {
                 "is_bootstrap": is_bootstrap, 
                 "is_custom_dist": is_custom_dist,
-                "n_components": 2
+                "n_components": n_components,
             }
         else:
             kwargs = {
                 "function": function.lower(), 
                 "is_bootstrap": is_bootstrap, 
                 "is_custom_dist": is_custom_dist,
-                "n_components": 2
+                "n_components": n_components,
+                "max_depth": max_depth,
+                "min_samples_split": min_samples_split, 
+                "min_samples_leaf": min_samples_leaf,
+                "sigma": sigma
             }
 
         aft_forest = AFTForest(n_trees= n_trees, random_params=False, **kwargs)
@@ -67,7 +81,11 @@ def run(args):
             function=function.lower(), 
             is_bootstrap=is_bootstrap, 
             is_custom_dist=is_custom_dist,
-            n_components=2
+            n_components=n_components,
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            sigma=sigma
         )
         start = time.time()
         aft_tree.fit(X_train, y_train)
@@ -86,9 +104,28 @@ if __name__ == "__main__":
     parser.add_argument('--path', type=str, help='Path to save tree')
     parser.add_argument('--n_trees', type=int, help='Number of trees')
     parser.add_argument('--function', type=str, help='Function')
+    parser.add_argument('--n_components', type=int, help='Number of components')
+    parser.add_argument('--max_depth', type=int, help='Max depth of tree')
+    parser.add_argument('--min_samples_split', type=int, help='Min samples split')
+    parser.add_argument('--min_samples_leaf', type=int, help='Min samples leaf')
+    parser.add_argument('--sigma', type=float, help='Sigma value')
+
     parser.add_argument('--is_bootstrap', action=argparse.BooleanOptionalAction, help='Is bootstrap')
     parser.add_argument('--is_custom_dist', action=argparse.BooleanOptionalAction, help='Is custom distribution')
 
     args = parser.parse_args()
 
-    run([args.parameter, args.dataset, args.path, args.n_trees, args.function, args.is_bootstrap, args.is_custom_dist])
+    run([
+        args.parameter, 
+        args.dataset, 
+        args.path, 
+        args.n_trees, 
+        args.function, 
+        args.n_components, 
+        args.max_depth, 
+        args.min_samples_split, 
+        args.min_samples_leaf, 
+        args.sigma,
+        args.is_bootstrap,
+        args.is_custom_dist
+    ])

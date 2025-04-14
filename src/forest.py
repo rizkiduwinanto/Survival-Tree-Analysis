@@ -5,7 +5,8 @@ import time
 import multiprocessing
 from tree import AFTSurvivalTree
 from lifelines.utils import concordance_index
-from sksurv.metrics import integrated_brier_score
+from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
+from sklearn.metrics import mean_absolute_error
 from tqdm import tqdm
 import os
 
@@ -17,7 +18,27 @@ class AFTForest():
     """
         Survival Regression Forest for AFTLoss
     """
-    def __init__(self, n_trees=10, percent_len_sample=0.8, **kwargs):
+    def __init__(
+        self, 
+        n_trees=10, 
+        percent_len_sample=0.8,
+        **kwargs
+    ):
+        """
+            n_trees: number of trees in the forest
+            percent_len_sample: percentage of the sample to be used for each tree
+        """
+        self.default_params = {
+            "max_depth": 5,
+            "min_samples_split": 5,
+            "min_samples_leaf": 5,
+            "sigma": 0.5,
+            "function": 'norm',
+            "is_custom_dist": False,
+            "is_bootstrap": False,
+            "n_components": 10,
+        }
+
         self.percent_len_sample = percent_len_sample
 
         self.trees = [
@@ -29,19 +50,15 @@ class AFTForest():
     # Tuning search for hyperparameters 
     def _get_params(self, **kwargs):
         args = {
-            "max_depth": np.random.randint(1, 10) if "max_depth" not in kwargs else kwargs["max_depth"],
-            "min_samples_split": np.random.randint(1, 10) if "min_samples_split" not in kwargs else kwargs["min_samples_split"],
-            "min_samples_leaf": np.random.randint(1, 10) if "min_samples_leaf" not in kwargs else kwargs["min_samples_leaf"],
-            "sigma": np.random.uniform(0, 1) if "sigma" not in kwargs else kwargs["sigma"],
+            "max_depth": self.default_params['max_depth'] if "max_depth" not in kwargs else kwargs["max_depth"],
+            "min_samples_split": self.default_params['min_samples_split'] if "min_samples_split" not in kwargs else kwargs["min_samples_split"],
+            "min_samples_leaf": self.default_params['min_samples_split'] if "min_samples_leaf" not in kwargs else kwargs["min_samples_leaf"],
+            "sigma": self.default_params['sigma'] if "sigma" not in kwargs else kwargs["sigma"],
             "function": np.random.choice(['norm', 'logistic', 'extreme']) if "function" not in kwargs else kwargs["function"],
             "is_custom_dist": False if "is_custom_dist" not in kwargs else kwargs["is_custom_dist"],
             "is_bootstrap": False if "is_bootstrap" not in kwargs else kwargs["is_bootstrap"],
             "n_components": 10 if "n_components" not in kwargs else kwargs["n_components"],
         }
-
-        time_int = int(time.time())
-        json.dump(args, open("params-{}.json".format(time_int), "w"))        
-
         return args
 
     def fit(self, X, y):
@@ -87,13 +104,55 @@ class AFTForest():
         c_index = concordance_index(times_true, times_pred, event_true)
         return c_index
 
-    def _brier(self, X, y_true):
-        times_pred = self.predict(X)
-        event_true = [1 if not censored else 0 for censored, _ in y_true]
-        times_true = [time for _, time in y_true]
+    def _brier(self, X, y):
+        """
+            Compute the Integrated Brier Score (IBS).
+        """
+        pred_times = self.predict(X)
 
-        ibs = integrated_brier_score(times_true, times_pred, event_true)
+        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
+
+        times_true = [time for _, time in y]
+        min_time = min(times_true) 
+        max_time = max(times_true)
+        time_points = np.linspace(min_time,  max_time * 0.999, 100)
+
+        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
+                              for pred_time in pred_times])
+
+        ibs = integrated_brier_score(y_structured, y_structured, survival_probs, time_points)
         return ibs
+
+    def _auc(self, X, y):
+        """
+            Compute the Area Under the Curve (AUC).
+        """
+        pred_times = self.predict(X)
+
+        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
+
+        times_true = [time for _, time in y]
+        min_time = min(times_true) 
+        max_time = max(times_true)
+        time_points = np.linspace(min_time, max_time*0.998, 100)
+
+        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
+                              for pred_time in pred_times])
+
+        auc, mean_auc = cumulative_dynamic_auc(y_structured, y_structured, survival_probs, time_points)
+        return auc, mean_auc
+
+    def _mae(self, X, y):
+        """
+            Compute the Mean Absolute Error (MAE).
+        """
+        pred_times = self.predict(X)
+
+        event_true = [1 if not censored else 0 for censored, _ in y]
+        times_true = [time for _, time in y]
+
+        mae = mean_absolute_error(times_true, pred_times)
+        return mae
 
     def save(self, path):
         if not os.path.exists(MAIN_FOLDER):

@@ -11,7 +11,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 import json
 from sklearn.model_selection import train_test_split
-from sksurv.metrics import integrated_brier_score
+from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
+from sklearn.metrics import mean_absolute_error
 import time
 
 class AFTSurvivalTree():
@@ -320,22 +321,55 @@ class AFTSurvivalTree():
         c_index = concordance_index(times_true, times_pred, event_true)
         return c_index
 
-    def _brier(self, X, y_train, y_test):
+    def _brier(self, X, y):
         """
-            Implement Integrated Brier Score
+            Compute the Integrated Brier Score (IBS).
         """
-        times_pred = self.predict(X)
-        event_true = [1 if not censored else 0 for censored, _ in y_true]
-        times_true = [time for _, time in y_true]
+        pred_times = self.predict(X)
 
-        y_true_structured = np.array([(not censored, time) for censored, time in y_true], dtype=[('event', '?'), ('time', '<f8')])
+        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
 
-        min_time = min(times_true)
+        times_true = [time for _, time in y]
+        min_time = min(times_true) 
         max_time = max(times_true)
-        time_points = np.linspace(min_time, max_time, 100)
+        time_points = np.linspace(min_time, max_time * 0.999, 100)
 
-        ibs = integrated_brier_score(y_train, y_test, times_pred, time_points)
+        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
+                              for pred_time in pred_times])
+
+        ibs = integrated_brier_score(y_structured, y_structured, survival_probs, time_points)
         return ibs
+
+    def _auc(self, X, y):
+        """
+            Compute the Area Under the Curve (AUC).
+        """
+        pred_times = self.predict(X)
+
+        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
+
+        times_true = [time for _, time in y]
+        min_time = min(times_true) 
+        max_time = max(times_true)
+        time_points = np.linspace(min_time, max_time * 0.999, 100)
+
+        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
+                              for pred_time in pred_times])
+
+        auc, mean_auc = cumulative_dynamic_auc(y_structured, y_structured, survival_probs, time_points)
+        return auc, mean_auc
+
+    def _mae(self, X, y):
+        """
+            Compute the Mean Absolute Error (MAE).
+        """
+        pred_times = self.predict(X)
+
+        event_true = [1 if not censored else 0 for censored, _ in y]
+        times_true = [time for _, time in y]
+
+        mae = mean_absolute_error(times_true, pred_times)
+        return mae
 
     def _visualize(self):
         if self.tree is None:
