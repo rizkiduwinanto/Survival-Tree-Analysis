@@ -28,7 +28,10 @@ class AFTSurvivalTree():
         function="norm", 
         is_custom_dist=False,
         is_bootstrap=False,
-        n_components=10
+        n_components=10,
+        n_samples=1000,
+        percent_len_sample=0.8,
+        test_size=0.2,
     ):
         self.tree = None
         self.max_depth = (2**31) - 1 if max_depth is None else max_depth
@@ -41,6 +44,9 @@ class AFTSurvivalTree():
         self.custom_dist = None
         self.is_bootstrap = is_bootstrap
         self.is_custom_dist = is_custom_dist
+        self.n_samples = n_samples
+        self.percent_len_sample = percent_len_sample
+        self.test_size = test_size
 
         if is_custom_dist:
             if function == "weibull":
@@ -56,14 +62,14 @@ class AFTSurvivalTree():
             else:
                 raise ValueError("Custom distribution not supported")
 
-    def fit(self, X, y, split=None, test_size=0.2):
+    def fit(self, X, y, split=None):
         if self.custom_dist is not None:
             if self.is_bootstrap:
-                self.custom_dist.fit_bootstrap(y)
+                self.custom_dist.fit_bootstrap(y, n_samples=self.n_samples, percentage=self.percent_len_sample)
                 self.build_tree(X, y)
                 return
             else:
-                x_train, x_dist, y_train, y_dist = train_test_split(X, y, test_size=test_size, random_state=42)
+                x_train, x_dist, y_train, y_dist = train_test_split(X, y, test_size=self.test_size, random_state=42)
                 self.custom_dist.fit(y_dist)
                 self.build_tree(x_train, y_train)
                 return

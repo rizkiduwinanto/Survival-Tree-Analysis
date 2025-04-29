@@ -4,6 +4,10 @@ from lifelines import WeibullFitter, LogNormalFitter, LogLogisticFitter, Exponen
 from sklearn.mixture import GaussianMixture
 from abc import abstractmethod
 from scipy.stats import norm, lognorm, fisk, gumbel_r
+import warnings
+from lifelines.exceptions import ApproximationWarning
+
+warnings.filterwarnings("ignore", category=ApproximationWarning)
 
 class Distribution():
     """
@@ -30,7 +34,7 @@ class Distribution():
         pass
 
     @abstractmethod
-    def fit_bootstrap(self, n_samples=100, percentage=0.8):
+    def fit_bootstrap(self, n_samples=1000, percentage=0.5):
         """
         Fit the distribution to the data
         """
@@ -93,7 +97,7 @@ class Weibull(Distribution):
         self.rho_ = wf.rho_
         self.lambda_ = wf.lambda_
 
-    def fit_bootstrap(self, y, n_samples=1000, percentage=1):
+    def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
         """
         Fit the distribution to the data
         """
@@ -186,7 +190,7 @@ class GMM(Distribution):
         self.weights_ = gmm.weights_
 
 
-    def fit_bootstrap(self, y, n_samples=1000, percentage=1):
+    def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
         """
         Fit the distribution to the data
         """
@@ -305,7 +309,7 @@ class LogNormal(Distribution):
         self.mu_ = lnf.mu_
         self.sigma_ = lnf.sigma_
 
-    def fit_bootstrap(self, y, n_samples=100, percentage=0.8):
+    def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
         """
         Fit the distribution to the data
         """
@@ -391,7 +395,7 @@ class LogLogistic(Distribution):
         self.alpha_ = llf.alpha_
         self.beta_ = llf.beta_
 
-    def fit_bootstrap(self, y, n_samples=100, percentage=0.5):
+    def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
         """
         Fit the distribution to the data
         """
@@ -474,7 +478,7 @@ class LogExtreme(Distribution):
 
         self.scale_ = scale
 
-    def fit_bootstrap(self, y, n_samples=100, percentage=0.8):
+    def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
         """
         Fit the distribution to the data
         """

@@ -4,8 +4,6 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import shap
 
-np.random.seed(42) 
-
 class SupportDataset():
     def __init__(self, data, impute_rest=True, convert_bool=True, is_scikit=False):
         self.data = data.copy()

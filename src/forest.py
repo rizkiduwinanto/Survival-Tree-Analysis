@@ -12,8 +12,6 @@ import os
 
 MAIN_FOLDER = "models/forest"
 
-np.random.seed(42)
-
 class AFTForest():
     """
         Survival Regression Forest for AFTLoss
@@ -21,7 +19,8 @@ class AFTForest():
     def __init__(
         self, 
         n_trees=10, 
-        percent_len_sample=0.8,
+        percent_len_sample_forest=0.37,
+        is_feature_subsample=False,
         **kwargs
     ):
         """
@@ -37,9 +36,13 @@ class AFTForest():
             "is_custom_dist": False,
             "is_bootstrap": False,
             "n_components": 10,
+            "n_samples": 1000,
+            "percent_len_sample": 0.8,
+            "test_size": 0.2,
         }
 
-        self.percent_len_sample = percent_len_sample
+        self.percent_len_sample_forest = percent_len_sample_forest
+        self.is_feature_subsample = is_feature_subsample
 
         self.trees = [
             AFTSurvivalTree(**self._get_params(**kwargs)) for _ in range(n_trees)
@@ -49,6 +52,9 @@ class AFTForest():
 
     # Tuning search for hyperparameters 
     def _get_params(self, **kwargs):
+        """f
+            Get the parameters for the tree
+        """
         args = {
             "max_depth": self.default_params['max_depth'] if "max_depth" not in kwargs else kwargs["max_depth"],
             "min_samples_split": self.default_params['min_samples_split'] if "min_samples_split" not in kwargs else kwargs["min_samples_split"],
@@ -57,7 +63,10 @@ class AFTForest():
             "function": np.random.choice(['norm', 'logistic', 'extreme']) if "function" not in kwargs else kwargs["function"],
             "is_custom_dist": False if "is_custom_dist" not in kwargs else kwargs["is_custom_dist"],
             "is_bootstrap": False if "is_bootstrap" not in kwargs else kwargs["is_bootstrap"],
-            "n_components": 10 if "n_components" not in kwargs else kwargs["n_components"],
+            "n_components": self.default_params['n_components'] if "n_components" not in kwargs else kwargs["n_components"],
+            "n_samples": self.default_params['n_samples'] if "n_samples" not in kwargs else kwargs["n_samples"],
+            "percent_len_sample": self.default_params['percent_len_sample'] if "percent_len_sample" not in kwargs else kwargs["percent_len_sample"],
+            "test_size": self.default_params['test_size'] if "test_size" not in kwargs else kwargs["test_size"],
         }
         return args
 
@@ -68,20 +77,37 @@ class AFTForest():
         ))
 
     def _fit_tree(self, tree, X, y):
-        len_sample = int(np.round(len(X) * self.percent_len_sample))
-        X_sample, y_sample = self.sample(X, y, len_sample)
+        len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
+        X_sample, y_sample = self.data_sample(X, y, len_sample)
+
+        if self.is_feature_subsample:
+            len_feature_sample = int(np.round(X.shape[1] * self.percent_len_sample_forest))
+            X_sample = self.feature_subsample(X_sample, len_feature_sample)
+
         tree.fit(X_sample, y_sample)
         return tree
 
     def fit_non_parallel(self, X, y):
         for tree in self.trees:
-            len_sample = int(np.round(len(X) * self.percent_len_sample))
+            len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
             X_sample, y_sample = self.sample(X, y, len_sample)
             tree.fit(X, y)
 
-    def sample(self, X, y, len_sample):
-        indices = np.random.choice(len(X), len_sample, replace=True)
+    def data_sample(self, X, y, len_sample):
+        """
+            Sample the data for the tree
+        """
+        indices = np.random.choice(len(X), size=len_sample, replace=True)
+        print("Indices: ", indices)
         return X[indices], y[indices]
+
+    def feature_subsample(self, X, len_sample):
+        """
+            Sample the data for the tree
+        """
+        select_feature = np.random.choice(X.shape[1], size=len_sample, replace=False)
+        X_sample = X[:, select_feature]
+        return X_sample
 
     def predict(self, X):
         predictions = [self.get_prediction(x) for x in X]
@@ -163,7 +189,7 @@ class AFTForest():
 
         forest_state = {
             'n_trees': self.n_trees,
-            'percent_len_sample': self.percent_len_sample
+            'percent_len_sample': self.percent_len_sample_forest
         }
 
         metadata_path = os.path.join(new_path, "_metadata.json")
