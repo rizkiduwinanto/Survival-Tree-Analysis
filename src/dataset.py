@@ -154,15 +154,46 @@ class VeteranLungDataset():
 
 class NHANES():
     def __init__(self):
-        pass
+        self.data, self.label_shap = shap.datasets.nhanesi()
+        self.label = self.create_label()
+        self.xgboost_label = self.create_xgboost_label()
     
     def create_label(self):
-        pass
+        label = pd.DataFrame()
+        label['death'] = [0 if x < 0 else 1 for x in self.label_shap]
+        label['d.time'] = abs(self.label_shap)
+        record = label.to_records(index=False)
+        structured_arr = np.stack(record, axis=0)
 
-    def preprocess(self):
-        pass
+        return structured_arr
 
-class SyntheticDataset:
+    def create_xgboost_label(self):
+        label = pd.DataFrame()
+        label['Survival_label_lower_bound'] = abs(self.label_shap)
+        label['Survival_label_upper_bound'] = [abs(self.label_shap) if x > 0 else np.inf for x in self.label_shap]
+        return label
+
+    def get_label(self):
+        return self.label
+    
+    def get_xgboost_label(self):
+        return self.xgboost_label
+
+    def get_shap_label(self):
+        return self.label_shap
+
+    def get_data(self):
+        return self.data
+
+    def get_train_test(self, test_size=0.2, random_state=42):
+        x_train, y_train, x_test, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
+        return x_train, y_train, x_test, y_test
+
+    def get_train_test_xgboost(self, test_size=0.2, random_state=42):
+        x_train, y_train, x_test, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
+        return x_train, y_train, x_test, y_test
+
+class SyntheticDataset():
     def __init__(self, n_censored, n_uncensored, n_feature=2):
         self.n_feature = n_feature
         self.n_samples = n_censored + n_uncensored

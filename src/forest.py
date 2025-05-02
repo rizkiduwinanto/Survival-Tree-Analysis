@@ -8,6 +8,7 @@ from lifelines.utils import concordance_index
 from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
 from sklearn.metrics import mean_absolute_error
 from tqdm import tqdm
+import random
 import os
 
 MAIN_FOLDER = "models/forest"
@@ -21,6 +22,7 @@ class AFTForest():
         n_trees=10, 
         percent_len_sample_forest=0.37,
         is_feature_subsample=False,
+        random_state=None,
         **kwargs
     ):
         """
@@ -40,6 +42,8 @@ class AFTForest():
             "percent_len_sample": 0.8,
             "test_size": 0.2,
         }
+
+        self.random_state = random_state
 
         self.percent_len_sample_forest = percent_len_sample_forest
         self.is_feature_subsample = is_feature_subsample
@@ -72,19 +76,20 @@ class AFTForest():
 
     def fit(self, X, y):
         self.trees = list(tqdm(Parallel(n_jobs=multiprocessing.cpu_count())(
-            delayed(self._fit_tree)(self.trees[idx], X, y) for idx in range(len(self.trees))),
+            delayed(self._fit_tree)(self.trees[idx], X, y, self.random_state + idx) for idx in range(len(self.trees))),
             total=self.n_trees
         ))
 
-    def _fit_tree(self, tree, X, y):
+    def _fit_tree(self, tree, X, y, random_state=None):
         len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
-        X_sample, y_sample = self.data_sample(X, y, len_sample)
+        X_sample, y_sample = self.data_sample(X, y, len_sample, random_state=random_state)
 
         if self.is_feature_subsample:
             len_feature_sample = int(np.round(X.shape[1] * self.percent_len_sample_forest))
-            X_sample = self.feature_subsample(X_sample, len_feature_sample)
+            X_sample = self.feature_subsample(X_sample, len_feature_sample, random_state=random_state)
 
         tree.fit(X_sample, y_sample)
+
         return tree
 
     def fit_non_parallel(self, X, y):
@@ -93,19 +98,24 @@ class AFTForest():
             X_sample, y_sample = self.sample(X, y, len_sample)
             tree.fit(X, y)
 
-    def data_sample(self, X, y, len_sample):
+    def data_sample(self, X, y, len_sample, random_state=None):
         """
             Sample the data for the tree
         """
-        indices = np.random.choice(len(X), size=len_sample, replace=True)
-        print("Indices: ", indices)
+        if random_state is not None:
+            rng = np.random.RandomState(random_state)
+
+        indices = rng.choice(len(X), size=len_sample, replace=True)
         return X[indices], y[indices]
 
-    def feature_subsample(self, X, len_sample):
+    def feature_subsample(self, X, len_sample, random_state=None):
         """
             Sample the data for the tree
         """
-        select_feature = np.random.choice(X.shape[1], size=len_sample, replace=False)
+        if random_state is not None:
+            rng = np.random.RandomState(random_state)
+
+        select_feature = rng.choice(X.shape[1], size=len_sample, replace=False)
         X_sample = X[:, select_feature]
         return X_sample
 

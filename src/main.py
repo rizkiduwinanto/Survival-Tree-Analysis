@@ -90,6 +90,7 @@ def run(args):
             n_trees= n_trees, 
             percent_len_sample_forest=percent_len_sample_forest, 
             is_feature_subsample=is_feature_subsample,
+            random_state=42,
             **kwargs
         )
 

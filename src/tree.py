@@ -3,7 +3,7 @@ import math
 from joblib import Parallel, delayed
 import multiprocessing
 from node import TreeNode
-from distribution import Weibull, LogLogistic, LogNormal, LogExtreme, GMM
+from distribution import Weibull, LogLogistic, LogNormal, LogExtreme, GMM, GMM_New
 from math_utils import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
 from lifelines.utils import concordance_index
 import graphviz
@@ -59,6 +59,8 @@ class AFTSurvivalTree():
                 self.custom_dist = LogExtreme()
             elif function == "gmm":
                 self.custom_dist = GMM(n_components=n_components)
+            elif function == "gmm_new":
+                self.custom_dist = GMM_New(n_components=n_components)
             else:
                 raise ValueError("Custom distribution not supported")
 

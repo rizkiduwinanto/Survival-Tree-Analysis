@@ -161,6 +161,100 @@ class Weibull(Distribution):
         self.rho_ = params['rho']
         self.lambda_ = params['lambda']
 
+class GMM_New(Distribution):
+    """
+    Class to define the Gaussian Mixture Model
+    """
+    def __init__(self, n_components=10):
+        super().__init__()
+        self.n_components = n_components
+
+        self.means_ = None
+        self.covariances_ = None
+        self.weights_ = None
+
+        self.means_cdf_ = None
+        self.covariances_cdf_ = None
+        self.weights_cdf_ = None
+        
+        self.fitter = GaussianMixture(n_components=n_components)
+        self.fitter_cdf = GaussianMixture(n_components=n_components)
+        self.gmm = None
+
+    def fit(self, y):
+        """
+        Fit the distribution to the data
+        """
+
+        print("Fitting GMM")
+        self.y = y
+        times, events = self.unpack_data(y)
+
+        uncensored_times = np.array(times)[np.array(events) == 1]
+        print("Uncensored times: ", uncensored_times)
+        gmm = self.fitter.fit(uncensored_times.reshape(-1, 1))
+
+        self.means_ = gmm.means_
+        self.covariances_ = gmm.covariances_
+        self.weights_ = gmm.weights_
+
+        times = np.array(times)
+        gmm_cdf = self.fitter_cdf.fit(times.reshape(-1, 1))
+        self.means_cdf_ = gmm_cdf.means_
+        self.covariances_cdf_ = gmm_cdf.covariances_
+        self.weights_cdf_ = gmm_cdf.weights_
+
+    def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
+        """
+        Fit the distribution to the data
+        """
+        self.y = y
+
+        bootstrap_pdf_means = []
+        bootstrap_pdf_covs = []
+        bootstrap_pdf_weights = []
+
+        bootstrap_cdf_means = []
+        bootstrap_cdf_covs = []
+        bootstrap_cdf_weights = []
+
+        for _ in range(n_samples):
+            sample_indices = np.random.choice(range(len(self.y)), int(percentage * len(self.y)), replace=True)
+            
+            resampled_y = self.y[sample_indices]
+
+            resampled_times, resampled_events = self.unpack_data(resampled_y)
+
+            uncensored_times = np.array(resampled_times)[np.array(resampled_events) == 1]
+             
+            if len(uncensored_times) > 0:
+                gmm_pdf = self.fitter.fit(uncensored_times.reshape(-1, 1))
+                bootstrap_pdf_means.append(gmm_pdf.means_)
+                bootstrap_pdf_covs.append(gmm_pdf.covariances_)
+                bootstrap_pdf_weights.append(gmm_pdf.weights_)
+
+            resampled_times = np.array(resampled_times)
+            gmm_cdf = self.fitter_cdf.fit(resampled_times.reshape(-1, 1))
+            bootstrap_cdf_means.append(gmm_cdf.means_)
+            bootstrap_cdf_covs.append(gmm_cdf.covariances_)
+            bootstrap_cdf_weights.append(gmm_cdf.weights_)
+
+        mean_pdf_means = np.mean(bootstrap_pdf_means, axis=0)
+        mean_pdf_covs = np.mean(bootstrap_pdf_covs, axis=0)
+        mean_pdf_weights = np.mean(bootstrap_pdf_weights, axis=0)
+
+        mean_cdf_means = np.mean(bootstrap_cdf_means, axis=0)
+        mean_cdf_covs = np.mean(bootstrap_cdf_covs, axis=0)
+        mean_cdf_weights = np.mean(bootstrap_cdf_weights, axis=0)
+
+        self.means_ = mean_pdf_means
+        self.covariances_ = mean_pdf_covs  
+        self.weights_ = mean_pdf_weights
+
+        self.means_cdf_ = mean_cdf_means
+        self.covariances_cdf_ = mean_cdf_covs
+        self.weights_cdf_ = mean_cdf_weights
+
 class GMM(Distribution):
     """
     Class to define the Gaussian Mixture Model
