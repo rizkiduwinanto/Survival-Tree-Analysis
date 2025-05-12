@@ -22,7 +22,7 @@ class AFTForest():
         n_trees=10, 
         percent_len_sample_forest=0.37,
         is_feature_subsample=False,
-        random_state=None,
+        random_state=42,
         **kwargs
     ):
         """
