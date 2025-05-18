@@ -24,6 +24,30 @@ class TreeNode():
         }
         return node_dict
 
+    def set_feature_index(self, feature_index):
+        self.feature_index = feature_index
+
+    def set_threshold(self, threshold):
+        self.threshold = threshold
+
+    def set_loss(self, loss):
+        self.loss = loss
+    
+    def set_num_sample(self, num_sample):
+        self.num_sample = num_sample
+
+    def set_value(self, value):
+        self.value = value
+
+    def set_left(self, left):
+        self.left = left
+    
+    def set_right(self, right):
+        self.right = right
+    
+    def set_max_depth(self, max_depth):
+        self.max_depth = max_depth
+
     @classmethod
     def from_dict(cls, node_dict):
         if node_dict is None:

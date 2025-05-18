@@ -13,7 +13,7 @@ import json
 from sklearn.model_selection import train_test_split
 from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
 from sklearn.metrics import mean_absolute_error
-import time
+from collections import deque
 
 class AFTSurvivalTree():
     """
@@ -32,6 +32,7 @@ class AFTSurvivalTree():
         n_samples=1000,
         percent_len_sample=0.8,
         test_size=0.2,
+        mode="recursive"
     ):
         self.tree = None
         self.max_depth = (2**31) - 1 if max_depth is None else max_depth
@@ -47,6 +48,7 @@ class AFTSurvivalTree():
         self.n_samples = n_samples
         self.percent_len_sample = percent_len_sample
         self.test_size = test_size
+        self.mode = mode
 
         if is_custom_dist:
             if function == "weibull":
@@ -64,7 +66,7 @@ class AFTSurvivalTree():
             else:
                 raise ValueError("Custom distribution not supported")
 
-    def fit(self, X, y, split=None):
+    def fit(self, X, y):
         if self.custom_dist is not None:
             if self.is_bootstrap:
                 self.custom_dist.fit_bootstrap(y, n_samples=self.n_samples, percentage=self.percent_len_sample)
@@ -76,7 +78,12 @@ class AFTSurvivalTree():
                 self.build_tree(x_train, y_train)
                 return
         else:
-            self.build_tree(X, y)
+            if self.mode == "recursive":
+                self.build_tree(X, y)
+            elif self.mode == "bfs":
+                self.build_tree_bfs(X, y)
+            elif self.mode == "dfs":
+                self.build_tree_dfs(X, y)
             return
 
     def build_tree(self, X, y, depth=0):   
@@ -116,6 +123,128 @@ class AFTSurvivalTree():
         if depth == 0:
             self.tree = node
         return node
+
+    def build_tree_bfs(self, X, y, depth=0):  
+        queue = deque()
+        root = TreeNode(None, None, None, None, None, num_sample=len(y))
+        self.tree = root
+
+        queue.append({
+            'parent_node':root,
+            'X': X,
+            'y': y,
+            'depth': depth
+        })
+
+        while queue:
+            current_node = queue.popleft()
+            X_current = current_node['X']
+            y_current = current_node['y']
+            depth = current_node['depth']
+            parent_node = current_node['parent_node']
+
+            if depth > self.max_depth or len(y_current) < self.min_samples_split:
+                parent_node.set_value(self.mean_y(y_current))
+                continue
+            
+            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_current)
+
+            if split is None and feature is None:
+                parent_node.set_value(self.mean_y(y_current))
+                continue
+
+            X_left, y_left = X_current[left_indices], y_current[left_indices]
+            X_right, y_right = X_current[right_indices], y_current[right_indices]
+
+            if len(X_left) == 0 or len(X_right) == 0:
+                parent_node.set_value(self.mean_y(y_current))
+                continue
+
+            if (len(y_left) < self.min_samples_leaf) or (len(y_right) < self.min_samples_leaf):
+                parent_node.set_value(self.mean_y(y_current))
+            else:
+                parent_node.set_feature_index(feature)
+                parent_node.set_threshold(split)
+                parent_node.set_loss(loss)
+                parent_node.set_num_sample(len(y_current))
+
+                parent_node.set_left(TreeNode(None, None, None, None, None, num_sample=len(y_left)))
+                parent_node.set_right(TreeNode(None, None, None, None, None, num_sample=len(y_right)))
+
+                queue.append({
+                    'parent_node':parent_node.left,
+                    'X': X_left,
+                    'y': y_left,
+                    'depth': depth + 1
+                })
+
+                queue.append({
+                    'parent_node':parent_node.right,
+                    'X': X_right,
+                    'y': y_right,
+                    'depth': depth + 1
+                })
+
+        return self.tree  
+
+    def build_tree_dfs(self, X, y, depth=0):  
+        stack = []
+        root = TreeNode(None, None, None, None, None, num_sample=len(y))
+        self.tree = root
+
+        stack.append({
+            'parent_node':root,
+            'X': X,
+            'y': y,
+            'depth': depth
+        })
+
+        while stack:
+            current_node = stack.pop()
+            X_current = current_node['X']
+            y_current = current_node['y']
+            depth = current_node['depth']
+            parent_node = current_node['parent_node']
+
+            if depth > self.max_depth or len(y_current) < self.min_samples_split:
+                parent_node.set_value(self.mean_y(y_current))
+                continue
+            
+            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_current)
+
+            if split is None and feature is None:
+                parent_node.set_value(self.mean_y(y_current))
+                continue
+
+            X_left, y_left = X_current[left_indices], y_current[left_indices]
+            X_right, y_right = X_current[right_indices], y_current[right_indices]
+
+            if (len(y_left) < self.min_samples_leaf) or (len(y_right) < self.min_samples_leaf):
+                parent_node.set_value(self.mean_y(y_current))
+            else:
+                parent_node.set_feature_index(feature)
+                parent_node.set_threshold(split)
+                parent_node.set_loss(loss)
+                parent_node.set_num_sample(len(y_current))
+
+                parent_node.left = TreeNode(None, None, None, None, None, num_sample=len(y_left))
+                parent_node.right = TreeNode(None, None, None, None, None, num_sample=len(y_right))
+
+                stack.append({
+                    'parent_node':parent_node.left,
+                    'X': X_left,
+                    'y': y_left,
+                    'depth': depth + 1
+                })
+
+                stack.append({
+                    'parent_node':parent_node.right,
+                    'X': X_right,
+                    'y': y_right,
+                    'depth': depth + 1
+                })
+
+        return self.tree
 
     def get_best_split(self, X, y, feature):
         best_split = None
@@ -206,9 +335,6 @@ class AFTSurvivalTree():
 
             left_loss = np.array([self.calculate_loss(y[mask], mean_y) for mask in left_mask])
             right_loss = np.array([self.calculate_loss(y[mask], mean_y) for mask in right_mask])
-    
-            left_counts = np.sum(left_mask, axis=1)
-            right_counts = np.sum(right_mask, axis=1)
 
             total_loss = left_loss + right_loss
 

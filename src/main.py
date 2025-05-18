@@ -6,6 +6,7 @@ from dataset import SupportDataset, SyntheticDataset, VeteranLungDataset
 from sklearn.model_selection import train_test_split
 import time
 import argparse
+import cProfile
 
 def run(args):
     type_algo = args[0]
