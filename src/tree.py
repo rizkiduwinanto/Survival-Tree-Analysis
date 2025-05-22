@@ -1,10 +1,9 @@
 import numpy as np
-import math
-from joblib import Parallel, delayed
-import multiprocessing
+import cupy as cp
 from node import TreeNode
 from distribution import Weibull, LogLogistic, LogNormal, LogExtreme, GMM, GMM_New
-from math_utils import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
+from math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
+from tree_utils import gpu_train_test_split
 from lifelines.utils import concordance_index
 import graphviz
 import uuid
@@ -14,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
 from sklearn.metrics import mean_absolute_error
 from collections import deque
+from cupy.cuda import Stream
 
 class AFTSurvivalTree():
     """
@@ -32,7 +32,7 @@ class AFTSurvivalTree():
         n_samples=1000,
         percent_len_sample=0.8,
         test_size=0.2,
-        mode="recursive"
+        mode="bfs"
     ):
         self.tree = None
         self.max_depth = (2**31) - 1 if max_depth is None else max_depth
@@ -66,181 +66,221 @@ class AFTSurvivalTree():
             else:
                 raise ValueError("Custom distribution not supported")
 
-    def fit(self, X, y):
+    def fit(self, X, y, random_state=None):
         if self.custom_dist is not None:
             if self.is_bootstrap:
                 self.custom_dist.fit_bootstrap(y, n_samples=self.n_samples, percentage=self.percent_len_sample)
-                self.build_tree(X, y)
-                return
-            else:
-                x_train, x_dist, y_train, y_dist = train_test_split(X, y, test_size=self.test_size, random_state=42)
-                self.custom_dist.fit(y_dist)
-                self.build_tree(x_train, y_train)
-                return
-        else:
-            if self.mode == "recursive":
-                self.build_tree(X, y)
-            elif self.mode == "bfs":
-                self.build_tree_bfs(X, y)
-            elif self.mode == "dfs":
-                self.build_tree_dfs(X, y)
-            return
 
-    def build_tree(self, X, y, depth=0):   
-        if depth > self.max_depth or len(y) < self.min_samples_split:
-            node = TreeNode(None, None, self.mean_y(y), None, None, num_sample=len(y))
+                X_gpu = cp.asarray(X)
+                y_death_gpu = cp.asarray(y['death'])
+                y_time_gpu = cp.asarray(y['d.time'])
+
+            else:
+                X_gpu = cp.asarray(X)
+                y_death_gpu = cp.asarray(y['death'])
+                y_time_gpu = cp.asarray(y['d.time'])
+
+                X_train, y_death_train, y_time_train, X_test, y_death_test, y_time_test = gpu_train_test_split(X_gpu, y_death_gpu, y_time_gpu, test_size=self.test_size, random_state=random_state)
+
+                y_death_test_cpu = cp.asnumpy(y_death_test)
+                y_time_test_cpu = cp.asnumpy(y_time_test)
+
+                y_dist = np.rec.fromarrays([y_death_test_cpu, y_time_test_cpu], names=['death', 'd.time'])
+
+                self.custom_dist.fit(y_dist)
+
+                X_gpu = X_train
+                y_death_gpu = y_death_train
+                y_time_gpu = y_time_train
+        else:
+            X_gpu = cp.asarray(X)
+            y_death_gpu = cp.asarray(y['death'])
+            y_time_gpu = cp.asarray(y['d.time'])
+
+        if self.mode == "recursive":
+            self.build_tree(X_gpu, y_death_gpu, y_time_gpu)
+        elif self.mode == "bfs":
+            self.build_tree_bfs(X_gpu, y_death_gpu, y_time_gpu)
+        elif self.mode == "dfs":
+            self.build_tree_dfs(X_gpu, y_death_gpu, y_time_gpu)
+        return
+
+    def build_tree(self, X, y_death, y_time, depth=0):   
+        if depth > self.max_depth or len(y_time) < self.min_samples_split:
+            node = TreeNode(None, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
             if depth == 0: 
                 self.tree = node
             return node
             
-        split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X, y)
+        split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X, y_death, y_time)
 
         if split is None and feature is None:
-            node = TreeNode(None, None, self.mean_y(y), None, None, num_sample=len(y))
+            node = TreeNode(None, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
             if depth == 0: 
                 self.tree = node
             return node
         
-        X_left, y_left = X[left_indices], y[left_indices]
-        X_right, y_right = X[right_indices], y[right_indices]
+        X_left = X[left_indices]
+        y_death_left = y_death[left_indices]
+        y_time_left = y_time[left_indices]
+        X_right = X[right_indices]
+        y_death_right = y_death[right_indices]
+        y_time_right = y_time[right_indices]
+        
 
-        if len(y_left) == 0 or len(y_right) == 0:
-            node = TreeNode(None, None, self.mean_y(y), None, None, num_sample=len(y))
+        if len( y_time_left) == 0 or len(y_time_right) == 0:
+            node = TreeNode(None, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
             if depth == 0: 
                 self.tree = node
             return node
 
         if len(X_left) < self.min_samples_leaf or len(X_right) < self.min_samples_leaf:
-            node = TreeNode(feature, None, self.mean_y(y), None, None, num_sample=len(y))
+            node = TreeNode(feature, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
             if depth == 0:
                 self.tree = node
             return node
 
-        left = self.build_tree(X_left, y_left, depth+1)
-        right = self.build_tree(X_right, y_right, depth+1)
+        left = self.build_tree(X_left, y_death_left, y_time_left, depth+1)
+        right = self.build_tree(X_right, y_death_right, y_time_right, depth+1)
     
-        node = TreeNode(feature, split, None, left, right, loss=loss, num_sample=len(y))
+        node = TreeNode(feature, split, None, left, right, loss=loss, num_sample=len(y_time))
         if depth == 0:
             self.tree = node
         return node
 
-    def build_tree_bfs(self, X, y, depth=0):  
+    def build_tree_bfs(self, X, y_death, y_time, depth=0):     
         queue = deque()
-        root = TreeNode(None, None, None, None, None, num_sample=len(y))
+        root = TreeNode(None, None, None, None, None, num_sample=len(y_time))
         self.tree = root
 
         queue.append({
             'parent_node':root,
             'X': X,
-            'y': y,
+            'y_death': y_death,
+            'y_time': y_time,
             'depth': depth
         })
 
         while queue:
             current_node = queue.popleft()
             X_current = current_node['X']
-            y_current = current_node['y']
+            y_death_current = current_node['y_death']
+            y_time_current = current_node['y_time']
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
-            if depth > self.max_depth or len(y_current) < self.min_samples_split:
-                parent_node.set_value(self.mean_y(y_current))
+            if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
+                parent_node.set_value(self.mean_y(y_time_current))
                 continue
             
-            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_current)
+            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized_streams(X_current, y_death_current, y_time_current)
 
             if split is None and feature is None:
-                parent_node.set_value(self.mean_y(y_current))
+                parent_node.set_value(self.mean_y(y_time_current))
                 continue
 
-            X_left, y_left = X_current[left_indices], y_current[left_indices]
-            X_right, y_right = X_current[right_indices], y_current[right_indices]
+            X_left = X[left_indices]
+            y_death_left = y_death[left_indices]
+            y_time_left = y_time[left_indices]
+            X_right = X[right_indices]
+            y_death_right = y_death[right_indices]
+            y_time_right = y_time[right_indices]
 
             if len(X_left) == 0 or len(X_right) == 0:
-                parent_node.set_value(self.mean_y(y_current))
+                parent_node.set_value(self.mean_y(y_time_current))
                 continue
 
-            if (len(y_left) < self.min_samples_leaf) or (len(y_right) < self.min_samples_leaf):
-                parent_node.set_value(self.mean_y(y_current))
+            if (len(y_time_left) < self.min_samples_leaf) or (len(y_time_right) < self.min_samples_leaf):
+                parent_node.set_value(self.mean_y(y_time_current))
             else:
                 parent_node.set_feature_index(feature)
                 parent_node.set_threshold(split)
                 parent_node.set_loss(loss)
-                parent_node.set_num_sample(len(y_current))
+                parent_node.set_num_sample(len(y_time_current))
 
-                parent_node.set_left(TreeNode(None, None, None, None, None, num_sample=len(y_left)))
-                parent_node.set_right(TreeNode(None, None, None, None, None, num_sample=len(y_right)))
+                parent_node.set_left(TreeNode(None, None, None, None, None, num_sample=len(y_time_left)))
+                parent_node.set_right(TreeNode(None, None, None, None, None, num_sample=len(y_time_right)))
 
                 queue.append({
                     'parent_node':parent_node.left,
                     'X': X_left,
-                    'y': y_left,
+                    'y_death': y_death_left,
+                    'y_time': y_time_left,
                     'depth': depth + 1
                 })
 
                 queue.append({
                     'parent_node':parent_node.right,
                     'X': X_right,
-                    'y': y_right,
+                    'y_death': y_death_right,
+                    'y_time': y_time_right,
                     'depth': depth + 1
                 })
 
         return self.tree  
 
-    def build_tree_dfs(self, X, y, depth=0):  
+    def build_tree_dfs(self, X, y_death, y_time, depth=0):     
         stack = []
-        root = TreeNode(None, None, None, None, None, num_sample=len(y))
+        root = TreeNode(None, None, None, None, None, num_sample=len(y_time))
         self.tree = root
 
         stack.append({
             'parent_node':root,
             'X': X,
-            'y': y,
+            'y_death': y_death,
+            'y_time': y_time,
             'depth': depth
         })
 
         while stack:
             current_node = stack.pop()
             X_current = current_node['X']
-            y_current = current_node['y']
+            y_death_current = current_node['y_death']
+            y_time_current = current_node['y_time']
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
-            if depth > self.max_depth or len(y_current) < self.min_samples_split:
-                parent_node.set_value(self.mean_y(y_current))
+            if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
+                parent_node.set_value(self.mean_y(y_time_current))
                 continue
             
-            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_current)
+            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_death_current, y_time_current)
 
             if split is None and feature is None:
-                parent_node.set_value(self.mean_y(y_current))
+                parent_node.set_value(self.mean_y(y_time_current))
                 continue
 
-            X_left, y_left = X_current[left_indices], y_current[left_indices]
-            X_right, y_right = X_current[right_indices], y_current[right_indices]
+            X_left = X[left_indices]
+            y_death_left = y_death[left_indices]
+            y_time_left = y_time[left_indices]
+            X_right = X[right_indices]
+            y_death_right = y_death[right_indices]
+            y_time_right = y_time[right_indices]
 
-            if (len(y_left) < self.min_samples_leaf) or (len(y_right) < self.min_samples_leaf):
-                parent_node.set_value(self.mean_y(y_current))
+            if (len(y_time_left) < self.min_samples_leaf) or (len(y_time_right) < self.min_samples_leaf):
+                parent_node.set_value(self.mean_y(y_time_current))
             else:
                 parent_node.set_feature_index(feature)
                 parent_node.set_threshold(split)
                 parent_node.set_loss(loss)
-                parent_node.set_num_sample(len(y_current))
+                parent_node.set_num_sample(len(y_time_current))
 
-                parent_node.left = TreeNode(None, None, None, None, None, num_sample=len(y_left))
-                parent_node.right = TreeNode(None, None, None, None, None, num_sample=len(y_right))
+                parent_node.left = TreeNode(None, None, None, None, None, num_sample=len(y_time_left))
+                parent_node.right = TreeNode(None, None, None, None, None, num_sample=len(y_time_right))
 
                 stack.append({
                     'parent_node':parent_node.left,
                     'X': X_left,
-                    'y': y_left,
+                    'y_death': y_death_left,
+                    'y_time': y_time_left,
                     'depth': depth + 1
                 })
 
                 stack.append({
                     'parent_node':parent_node.right,
                     'X': X_right,
-                    'y': y_right,
+                    'y_death': y_death_right,
+                    'y_time': y_time_right,
                     'depth': depth + 1
                 })
 
@@ -306,26 +346,105 @@ class AFTSurvivalTree():
 
         return best_split, best_feature, best_left_indices, best_right_indices, best_loss
 
-    def get_best_split_vectorized(self, X, y):
+    def get_best_split_vectorized_streams(self, X, y_death, y_time):
         best_split = None
         best_feature = None
         best_left_indices = None
         best_right_indices = None
-        best_loss = np.inf
+        best_loss = cp.inf
 
         n_samples = len(X)
         n_features = len(X[0])
 
-        mean_y = self.mean_y(y)
+        mean_y = self.mean_y(y_time)
+
+        n_streams = n_features
+        streams = [cp.cuda.Stream() for _ in range(n_streams)]
+
+        results = [{
+            'best_loss': cp.inf,
+            'best_split': None,
+            'best_feature': None,
+            'best_left_indices': None,
+            'best_right_indices': None
+        } for _ in range(n_streams)]
+
+        def process_feature_stream(self, feature_idx, stream_idx):
+            stream = streams[stream_idx]
+            with stream:
+                feature_values = X[:, feature_idx]
+                unique_values = cp.unique(feature_values)
+                
+                if len(unique_values) <= 1:
+                    return 
+
+                thresholds = unique_values.reshape(-1, 1)
+                left_mask = feature_values < thresholds
+                right_mask = feature_values >= thresholds
+
+                valid_splits = cp.any(left_mask, axis=1) & cp.any(right_mask, axis=1)
+                thresholds = thresholds[valid_splits]
+                left_mask = left_mask[valid_splits]
+                right_mask = right_mask[valid_splits]
+
+                if len(thresholds) == 0:
+                    return
+
+                left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in left_mask])
+                right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in right_mask])
+
+                total_loss = left_loss + right_loss
+
+                best_idx = cp.argmin(total_loss).item()
+                current_min_loss = total_loss[best_idx].item()
+
+                if current_min_loss < results[stream_idx]['best_loss']:
+                    results[stream_idx]['best_loss'] = current_min_loss
+                    results[stream_idx]['best_split'] = thresholds[best_idx].item()
+                    results[stream_idx]['best_feature'] = feature_idx
+                    results[stream_idx]['best_left_indices'] = cp.where(left_mask[best_idx])[0]
+                    results[stream_idx]['best_right_indices'] = cp.where(right_mask[best_idx])[0] 
+
+        for feature_idx in range(n_features):
+            process_feature_stream(self, feature_idx, feature_idx % n_streams)
+
+        for stream in streams:
+            stream.synchronize()
+
+        for result in results:
+            if result['best_loss'] < best_loss:
+                best_loss = result['best_loss']
+                best_split = result['best_split']
+                best_feature = result['best_feature']
+                best_left_indices = result['best_left_indices']
+                best_right_indices = result['best_right_indices']
+
+        return best_split, best_feature, best_left_indices, best_right_indices, best_loss
+
+    def get_best_split_vectorized(self, X, y_death, y_time):
+        best_split = None
+        best_feature = None
+        best_left_indices = None
+        best_right_indices = None
+        best_loss = cp.inf
+
+        n_samples = len(X)
+        n_features = len(X[0])
+
+        mean_y = self.mean_y(y_time)
 
         for feature in range(n_features):
-            unique_values = np.unique(X[:, feature])
-            thresholds = unique_values[:, np.newaxis]
+            feature_values = X[:, feature]
+            unique_values = cp.unique(feature_values)
+            
+            if len(unique_values) <= 1:
+                continue 
 
-            left_mask = X[:, feature][np.newaxis, :] < thresholds
-            right_mask = X[:, feature][np.newaxis, :] >= thresholds
+            thresholds = unique_values.reshape(-1, 1)
+            left_mask = feature_values < thresholds
+            right_mask = feature_values >= thresholds
 
-            valid_splits = np.logical_and(np.any(left_mask, axis=1), np.any(right_mask, axis=1))
+            valid_splits = cp.any(left_mask, axis=1) & cp.any(right_mask, axis=1)
             thresholds = thresholds[valid_splits]
             left_mask = left_mask[valid_splits]
             right_mask = right_mask[valid_splits]
@@ -333,40 +452,58 @@ class AFTSurvivalTree():
             if len(thresholds) == 0:
                 continue
 
-            left_loss = np.array([self.calculate_loss(y[mask], mean_y) for mask in left_mask])
-            right_loss = np.array([self.calculate_loss(y[mask], mean_y) for mask in right_mask])
+            left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in left_mask])
+            right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in right_mask])
 
             total_loss = left_loss + right_loss
 
-            best_idx = np.argmin(total_loss)
+            best_idx = cp.argmin(total_loss).item()
             current_min_loss = total_loss[best_idx].item()
 
             if current_min_loss < best_loss:
                 best_loss = current_min_loss
                 best_split = thresholds[best_idx].item()
                 best_feature = feature
-                best_left_indices = np.where(left_mask[best_idx])[0]
-                best_right_indices = np.where(right_mask[best_idx])[0]
+                best_left_indices = cp.where(left_mask[best_idx])[0]
+                best_right_indices = cp.where(right_mask[best_idx])[0]
 
         return best_split, best_feature, best_left_indices, best_right_indices, best_loss
+
+    def broadcast_loss(self, y_death, y_time, pred_mask, pred=None):
+        loss = self.calculate_loss(y_death, y_time, pred=pred)
+        loss_broadcast = cp.broadcast_to(loss, pred_mask.shape)
+        mask_loss = cp.where(pred_mask, loss_broadcast, 0)
+        return cp.sum(mask_loss, axis=1)
             
-    def calculate_loss(self, y, pred=None):
+    def calculate_loss(self, y_death, y_time, pred=None):
         if pred is None:
-            pred = self.mean_y(y)
+            pred = self.mean_y(y_time)
 
         loss = 0
-        for i in range(len(y)):
-            censor, value = y[i]
-            if censor:
-                loss += self.get_censored_value(value, np.inf, pred)
+        for i in range(len(y_time)):
+            if y_death[i]:
+                loss += self.get_censored_value(y_time[i], cp.inf, pred)
             else:
-                loss += self.get_uncensored_value(value, pred)
+                loss += self.get_uncensored_value(y_time[i], pred)
         return loss
+
+    def calculate_loss_vectorized(self, y_death, y_time, pred=None):
+        if pred is None:
+            pred = self.mean_y(y_time)
+
+        is_censored = y_death.astype(bool)
+
+        uncensored_loss = self.get_uncensored_value(y_time, pred)
+        censored_loss = self.get_censored_value(y_time, cp.inf, pred)
+
+        loss = cp.where(is_censored, uncensored_loss, censored_loss)
+
+        return cp.sum(loss)
     
     def get_uncensored_value(self, y, pred):
         if self.custom_dist is not None:
-            link_function = np.log(y) - pred
-            pdf = self.custom_dist.pdf(link_function)
+            link_function = cp.log(y) - pred
+            pdf = self.custom_dist.pdf_gpu(link_function)
         else:
             if self.function == "norm":
                 pdf = norm_pdf(y, pred, self.sigma)
@@ -377,15 +514,14 @@ class AFTSurvivalTree():
             else:
                 raise ValueError("Distribution not supported")
 
-        if pdf <= 0:
-            pdf = self.epsilon
-        return -np.log(pdf/(self.sigma*y))
+        pdf = cp.maximum(pdf, self.epsilon)
+        return -cp.log(pdf/(self.sigma*y))
 
     def get_censored_value(self, y_lower, y_upper, pred):
         if self.custom_dist is not None:
-            link_function_lower = np.log(y_lower) - pred
-            link_function_upper = np.log(y_upper) - pred
-            cdf_diff = self.custom_dist.cdf(link_function_upper) - self.custom_dist.cdf(link_function_lower)
+            link_function_lower = cp.log(y_lower) - pred
+            link_function_upper = cp.log(y_upper) - pred
+            cdf_diff = self.custom_dist.cdf_gpu(link_function_upper) - self.custom_dist.cdf_gpu(link_function_lower)
         else:
             if self.function == "norm":
                 cdf_diff = norm_cdf(y_upper, pred, self.sigma) - norm_cdf(y_lower, pred, self.sigma)
@@ -396,12 +532,11 @@ class AFTSurvivalTree():
             else:
                 raise ValueError("Distribution not supported")
 
-        if cdf_diff <= 0:
-            cdf_diff = self.epsilon
+        cdf_diff = cp.maximum(cdf_diff, self.epsilon)
         return -np.log(cdf_diff)
 
-    def mean_y(self, y):
-        return np.mean([value for _, value in y])
+    def mean_y(self, y_time):
+        return cp.mean(y_time)
 
     def predict(self, X):
         if self.tree is None:
@@ -414,7 +549,7 @@ class AFTSurvivalTree():
     def get_prediction(self, X, tree):
         try:
             if tree.value is not None:
-                return tree.value
+                return tree.value.get()
             else:
                 feature_value = X[tree.feature_index]
                 if feature_value <= tree.threshold:

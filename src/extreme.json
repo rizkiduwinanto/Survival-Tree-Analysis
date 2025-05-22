@@ -1,0 +1,24 @@
+{
+    "max_depth": 5,
+    "min_samples_split": 5,
+    "min_samples_leaf": 5,
+    "sigma": 0.5,
+    "function": "extreme",
+    "epsilon": 1e-11,
+    "is_custom_dist": true,
+    "is_bootstrap": true,
+    "tree": {
+        "feature_index": 0,
+        "threshold": null,
+        "loss": null,
+        "num_sample": 109,
+        "value": 120.36697247706422,
+        "max_depth": null,
+        "left": null,
+        "right": null
+    },
+    "custom_dist_type": "LogExtreme",
+    "custom_dist_params": {
+        "scale": 78.9758370638102
+    }
+}

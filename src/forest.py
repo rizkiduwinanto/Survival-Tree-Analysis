@@ -95,8 +95,13 @@ class AFTForest():
     def fit_non_parallel(self, X, y):
         for tree in self.trees:
             len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
-            X_sample, y_sample = self.sample(X, y, len_sample)
-            tree.fit(X, y)
+            X_sample, y_sample = self.data_sample(X, y, len_sample)
+            
+            if self.is_feature_subsample:
+                len_feature_sample = int(np.round(X.shape[1] * self.percent_len_sample_forest))
+                X_sample = self.feature_subsample(X_sample, len_feature_sample)
+
+            tree.fit(X_sample, y_sample)
 
     def data_sample(self, X, y, len_sample, random_state=None):
         """

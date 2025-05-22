@@ -1,4 +1,6 @@
 import numpy as np
+import cupy as cp
+from cupyx.scipy.special import erf
 from scipy.stats import weibull_min
 from lifelines import WeibullFitter, LogNormalFitter, LogLogisticFitter, ExponentialFitter
 from sklearn.mixture import GaussianMixture
@@ -137,11 +139,25 @@ class Weibull(Distribution):
         """
         return weibull_min.pdf(x, self.rho_, loc=0, scale=self.lambda_)
 
+    def pdf_gpu(self, x):
+        """
+        Compute the probability density function using GPU
+        """
+        pdf = (self.rho_ / self.lambda_) * (x / self.lambda_) ** (self.rho_ - 1) * cp.exp(- (x / self.lambda_) ** self.rho_)
+        return pdf
+
     def cdf(self, x):
         """
         Compute the cumulative density function
         """
         return weibull_min.cdf(x, self.rho_, loc=0, scale=self.lambda_)
+
+    def cdf_gpu(self, x):
+        """
+        Compute the cumulative density function
+        """
+        cdf = 1 - cp.exp(- (x / self.lambda_) ** self.rho_)
+        return cdf
 
     def get_params(self):
         """
@@ -266,6 +282,10 @@ class GMM(Distribution):
         self.means_ = None
         self.covariances_ = None
         self.weights_ = None
+
+        self.means_gpu_ = None
+        self.covariances_gpu_ = None
+        self.weights_gpu_ = None
         
         self.fitter = GaussianMixture(n_components=n_components)
         self.gmm = None
@@ -283,6 +303,9 @@ class GMM(Distribution):
         self.covariances_ = gmm.covariances_
         self.weights_ = gmm.weights_
 
+        self.means_gpu_ = cp.array(gmm.means_)
+        self.covariances_gpu_ = cp.array(gmm.covariances_)
+        self.weights_gpu_ = cp.array(gmm.weights_)
 
     def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
         """
@@ -315,6 +338,10 @@ class GMM(Distribution):
         self.covariances_ = mean_covs   
         self.weights_ = mean_weights
 
+        self.means_gpu_ = cp.array(mean_means)
+        self.covariances_gpu_ = cp.array(mean_covs)
+        self.weights_gpu_ = cp.array(mean_weights)
+
     def _fit(self, times, events):
         """
         Fit the distribution to the data
@@ -343,7 +370,34 @@ class GMM(Distribution):
         Compute the probability density function (only for non bootstrap)
         """
         return np.exp(self.gmm.score_samples(x.reshape(-1, 1)))
-        
+
+    @staticmethod
+    def norm_pdf_gpu(x, mean, cov):
+        """
+        Compute the probability density function
+        """
+        cov = cov.reshape(-1)
+        std_dev = cp.sqrt(cov)
+
+        x = x.reshape(-1, 1)
+        mean = mean.reshape(1, -1)
+        std_dev = std_dev.reshape(1, -1)
+
+        pdf = (1 / (std_dev * cp.sqrt(2 * np.pi))) * cp.exp(-0.5 * ((x - mean) / std_dev) ** 2)
+        return pdf
+
+    def pdf_gpu(self, x):
+        """
+        Compute the probability density function using GPU
+        """
+        means = self.means_gpu_
+        covs = self.covariances_gpu_
+        weights = self.weights_gpu_.reshape(1, -1)
+
+        weighted_pdfs = self.norm_pdf_gpu(x, means, covs) * weights
+        pdf = cp.sum(weighted_pdfs, axis=1)
+        return pdf
+
     def mix_norm_cdf(self, x):
         """
         Compute the cumulative density function
@@ -359,6 +413,33 @@ class GMM(Distribution):
         Compute the cumulative density function
         """
         return self.mix_norm_cdf(x)
+
+    @staticmethod
+    def norm_cdf_gpu(x, mean, cov):
+        """
+        Compute the cumulative density function
+        """
+        cov = cov.reshape(-1)
+        std_dev = cp.sqrt(cov)
+
+        x = x.reshape(-1, 1)
+        mean = mean.reshape(1, -1)
+        std_dev = std_dev.reshape(1, -1)
+
+        cdf = 0.5 * (1 + erf((x - mean) / (std_dev * cp.sqrt(2))))
+        return cdf
+
+    def cdf_gpu(self, x):
+        """
+        Compute the cumulative density function using GPU
+        """
+        means = self.means_gpu_
+        covs = self.covariances_gpu_
+        weights = self.weights_gpu_.reshape(1, -1)
+
+        weighted_cdfs = self.norm_cdf_gpu(x, means, covs) * weights
+        cdf = cp.sum(weighted_cdfs, axis=1)
+        return cdf
 
     def get_params(self):
         """
@@ -443,11 +524,25 @@ class LogNormal(Distribution):
         """
         return lognorm.pdf(x, self.sigma_, loc=0, scale=np.exp(self.mu_))
 
+    def pdf_gpu(self, x):
+        """
+        Compute the probability density function using GPU
+        """
+        pdf = (1 / (x * self.sigma_ * cp.sqrt(2 * np.pi))) * cp.exp(-0.5 * ((cp.log(x) - self.mu_) / self.sigma_) ** 2)
+        return pdf
+
     def cdf(self, x):
         """
         Compute the cumulative density function
         """
         return lognorm.cdf(x, self.sigma_, loc=0, scale=np.exp(self.mu_))
+
+    def cdf_gpu(self, x):
+        """
+        Compute the cumulative density function
+        """
+        cdf = 0.5 * (1 + erf((cp.log(x) - self.mu_) / (self.sigma_ * cp.sqrt(2))))
+        return cdf
 
     def get_params(self):
         """
@@ -476,6 +571,7 @@ class LogLogistic(Distribution):
         self.alpha_ = None
         self.beta_ = None
         self.fitter = LogLogisticFitter()
+        self.epsilon = 1e-10
 
     def fit(self, y):
         """
@@ -529,11 +625,29 @@ class LogLogistic(Distribution):
         """
         return fisk.pdf(x, self.alpha_, loc=0, scale=self.beta_)
 
+    def pdf_gpu(self, x):
+        """
+        Compute the probability density function using GPU
+        """
+        x = cp.maximum(x, self.epsilon)
+        z = x / self.beta_
+        pdf = (self.alpha_ / self.beta_) * z ** (self.alpha_ - 1) / (1 + z ** self.alpha_) ** 2
+        return pdf
+
     def cdf(self, x):
         """
         Compute the cumulative density function
         """
         return fisk.cdf(x, self.alpha_, loc=0, scale=self.beta_)
+
+    def cdf_gpu(self, x):
+        """
+        Compute the cumulative density function
+        """
+        x = cp.maximum(x, self.epsilon)
+        z = x / self.beta_
+        cdf = 1 / (1 + z ** self.alpha_)
+        return cdf
 
     def get_params(self):
         """
@@ -608,11 +722,27 @@ class LogExtreme(Distribution):
         """
         return gumbel_r.pdf(x, loc=0, scale=self.scale_)
 
+    def pdf_gpu(self, x):
+        """
+        Compute the probability density function using GPU
+        """
+        z = x / self.scale_
+        pdf = (1 / self.scale_) * cp.exp(z) * cp.exp(-cp.exp(z))
+        return pdf
+
     def cdf(self, x):
         """
         Compute the cumulative density function
         """
         return gumbel_r.cdf(x, loc=0, scale=self.scale_)
+
+    def cdf_gpu(self, x):
+        """
+        Compute the cumulative density function
+        """
+        z = x / self.scale_
+        cdf = cp.exp(-cp.exp(z))
+        return cdf
 
     def get_params(self):
         """
