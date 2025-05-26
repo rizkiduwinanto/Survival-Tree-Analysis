@@ -10,11 +10,9 @@ class DistributionFitter():
         return params
 
     def pdf(self, x, distribution, params):
-        # Calculate the probability density function
         return distribution.pdf(x, *params)
 
     def cdf(self, x, distribution, params):
-        # Calculate the cumulative distribution function
         return distribution.cdf(x, *params)
 
 

@@ -14,6 +14,7 @@ from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
 from sklearn.metrics import mean_absolute_error
 from collections import deque
 from cupy.cuda import Stream
+from sklearn.model_selection import train_test_split
 
 class AFTSurvivalTree():
     """
@@ -50,6 +51,10 @@ class AFTSurvivalTree():
         self.test_size = test_size
         self.mode = mode
 
+        self.X_train = None
+        self.y_death_train = None
+        self.y_time_train = None
+
         if is_custom_dist:
             if function == "weibull":
                 self.custom_dist = Weibull()
@@ -65,6 +70,40 @@ class AFTSurvivalTree():
                 self.custom_dist = GMM_New(n_components=n_components)
             else:
                 raise ValueError("Custom distribution not supported")
+
+    def prefit(self, X, y, random_state=None):
+        if self.custom_dist is None:
+            self.X_train = X
+            self.y_death_train = y['death']
+            self.y_time_train = y['d.time']
+        else:
+            if self.is_bootstrap:
+                self.custom_dist.fit_bootstrap(y, n_samples=self.n_samples, percentage=self.percent_len_sample)
+                self.X_train = X
+                self.y_death_train = y['death']
+                self.y_time_train = y['d.time']
+
+            else:
+                X_train, _, y_train, y_dist = train_test_split(X, y, test_size=self.test_size, random_state=random_state)
+                self.custom_dist.fit(y_dist)
+
+                self.X_train = X_train
+                self.y_death_train = y_train['death']
+                self.y_time_train = y_train['d.time']
+        return
+
+    def rf_fit(self):
+        X_gpu = cp.asarray(self.X_train)
+        y_death_gpu = cp.asarray(self.y_death_train)
+        y_time_gpu = cp.asarray(self.y_time_train)
+
+        if self.mode == "recursive":
+            self.build_tree(X_gpu, y_death_gpu, y_time_gpu)
+        elif self.mode == "bfs":
+            self.build_tree_bfs(X_gpu, y_death_gpu, y_time_gpu)
+        elif self.mode == "dfs":
+            self.build_tree_dfs(X_gpu, y_death_gpu, y_time_gpu)
+        return
 
     def fit(self, X, y, random_state=None):
         if self.custom_dist is not None:
@@ -173,7 +212,7 @@ class AFTSurvivalTree():
                 parent_node.set_value(self.mean_y(y_time_current))
                 continue
             
-            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized_streams(X_current, y_death_current, y_time_current)
+            split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_death_current, y_time_current)
 
             if split is None and feature is None:
                 parent_node.set_value(self.mean_y(y_time_current))

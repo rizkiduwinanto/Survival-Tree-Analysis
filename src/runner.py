@@ -5,6 +5,10 @@ import itertools
 import numpy as np
 import pandas as pd
 import random
+import matplotlib.pyplot as plt
+import seaborn as sns
+from forest import AFTForest
+from tree import AFTSurvivalTree
 
 random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
 
@@ -20,7 +24,7 @@ param_grid = {
     'test_size': [0.2, 0.3],
 }
 
-def run_n_models(model, x_train, y_train, x_test, y_test, n_models=10, **model_params):
+def run_n_models(model, x_train, y_train, x_test, y_test, prefix=None, n_models=10, **model_params):
     c_indexes = []
     brier_scores = []
     maes = []
@@ -29,35 +33,68 @@ def run_n_models(model, x_train, y_train, x_test, y_test, n_models=10, **model_p
         raise ValueError("Number of models exceeds available random seeds.")
 
     for i in tqdm(range(n_models)):
-        one_model = model(random_state=random_seeds[i], **model_params)
+        if model == "AFTForest":
+            one_model = AFTForest(random_state=random_seeds[i], **model_params)
+        elif model == "AFTSurvivalTree":
+            raise ValueError("AFTSurvivalTree does not support multiple models in this way.")
+
         one_model.fit(x_train, y_train)
 
         c_indexes.append(one_model._score(x_test, y_test))
         brier_scores.append(one_model._brier(x_test, y_test))
         maes.append(one_model._mae(x_test, y_test))
 
+        # Save the model if needed
+        prefix = prefix if prefix else "model"
+        one_model.save(f"{prefix}_model_{i+1}")
+
     return c_indexes, brier_scores, maes
 
-def cross_validate(model, x, y, n_splits=5, **model_params):
+def cross_validate(model, x, y, n_splits=5, prefix=None, **model_params):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
     c_indexes = []
     brier_scores = []
     maes = []
 
+    index = 0
+
     for train_index, test_index in tqdm(kf.split(x, y)):
         x_train_fold, x_test_fold = x[train_index], x[test_index]
         y_train_fold, y_test_fold = y[train_index], y[test_index]
 
-        one_model = model(random_state=random_seeds[0], **model_params)
+        if model == "AFTForest":
+            one_model = AFTForest(random_state=42, **model_params)
+        elif model == "AFTSurvivalTree":
+            params = {
+                'function': model_params['function'],
+                'is_bootstrap': model_params.get('is_bootstrap', False),
+                'is_custom_dist': model_params.get('is_custom_dist', False),
+                'n_components': model_params.get('n_components', 1),
+                'max_depth': model_params.get('max_depth', None),
+                'min_samples_split': model_params.get('min_samples_split', 2),
+                'min_samples_leaf': model_params.get('min_samples_leaf', 1),
+                'sigma': model_params.get('sigma', 0.1),
+                'n_samples': model_params.get('n_samples', 100),
+                'percent_len_sample': model_params.get('percent_len_sample', 0.5),
+                'test_size': model_params.get('test_size', 0.2),
+            }
+            one_model = AFTSurvivalTree(**params)
+
         one_model.fit(x_train_fold, y_train_fold)
 
         c_indexes.append(one_model._score(x_test_fold, y_test_fold))
         brier_scores.append(one_model._brier(x_test_fold, y_test_fold))
         maes.append(one_model._mae(x_test_fold, y_test_fold))
 
+        #save the model if needed
+        prefix = prefix if prefix else "model"
+        one_model.save(f"{prefix}_fold_{index+1}")
+
+        index += 1
+
     return c_indexes, brier_scores, maes
 
-def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False):
+def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, **kwargs):
     results =[]
 
     if custom_param_grid is None:
@@ -75,23 +112,30 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
 
     for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
         hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
+
+        params = {
+            **hyperparam_dict,
+            'function': kwargs['function']
+        }
+
         if is_cv:
             x = np.concatenate([x_train, x_test], axis=0)
             y = np.concatenate([y_train, y_test], axis=0)
-            c_indexes, briers, maes = cross_validate(model, x, y, n_splits=n_splits, **hyperparam_dict)
+            c_indexes, briers, maes = cross_validate(model, x, y, n_splits=n_splits, **params)
         else:
-            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models, **hyperparam_dict)
+            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, **params)
         
         results.append({
             'hyperparams': hyperparam_dict,
-            'c_index': np.mean(c_indexes),
-            'brier_score': np.mean(briers),
-            'mae': np.mean(maes)
+            'c_index': c_indexes,
+            'brier_score': briers,
+            'mae': maes,
+            'mean_c_index': np.mean(c_indexes),
+            'mean_brier_score': np.mean(briers),
+            'mean_mae': np.mean(maes)
         })
 
     return results
-
-
     
 
 

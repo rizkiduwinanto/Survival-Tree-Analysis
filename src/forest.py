@@ -10,8 +10,11 @@ from sklearn.metrics import mean_absolute_error
 from tqdm import tqdm
 import random
 import os
+import cupy as cp
+from cupy.cuda import Stream
 
 MAIN_FOLDER = "models/forest"
+MAX_GPU = 8  # Maximum number of GPU streams to use for parallel fitting
 
 class AFTForest():
     """
@@ -23,6 +26,7 @@ class AFTForest():
         percent_len_sample_forest=0.37,
         is_feature_subsample=False,
         random_state=42,
+        split_fitting=False,
         **kwargs
     ):
         """
@@ -44,6 +48,7 @@ class AFTForest():
         }
 
         self.random_state = random_state
+        self.split_fitting = split_fitting
 
         self.percent_len_sample_forest = percent_len_sample_forest
         self.is_feature_subsample = is_feature_subsample
@@ -75,10 +80,14 @@ class AFTForest():
         return args
 
     def fit(self, X, y):
-        self.trees = list(tqdm(Parallel(n_jobs=multiprocessing.cpu_count())(
-            delayed(self._fit_tree)(self.trees[idx], X, y, self.random_state + idx) for idx in range(len(self.trees))),
-            total=self.n_trees
-        ))
+        if self.split_fitting:
+            self.prefitting(X, y)
+            self.fit_gpu()
+        else:
+            self.trees = list(tqdm(Parallel(n_jobs=multiprocessing.cpu_count())(
+                delayed(self._fit_tree)(self.trees[idx], X, y, self.random_state + idx) for idx in range(len(self.trees))),
+                total=self.n_trees
+            ))
 
     def _fit_tree(self, tree, X, y, random_state=None):
         len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
@@ -92,6 +101,42 @@ class AFTForest():
 
         return tree
 
+    def prefitting(self, X, y):
+        """
+            Prefit the trees with the data
+        """
+        self.trees = list(tqdm(Parallel(n_jobs=multiprocessing.cpu_count())(
+            delayed(self._prefit)(self.trees[idx], X, y, self.random_state + idx) for idx in range(len(self.trees))),
+            total=self.n_trees
+        ))
+
+    def _prefit(self, tree, X, y, random_state=None):
+        len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
+        X_sample, y_sample = self.data_sample(X, y, len_sample, random_state=random_state)
+
+        if self.is_feature_subsample:
+            len_feature_sample = int(np.round(X.shape[1] * self.percent_len_sample_forest))
+            X_sample = self.feature_subsample(X_sample, len_feature_sample, random_state=random_state)
+
+        tree.prefit(X_sample, y_sample)
+
+        return tree
+
+    def fit_gpu(self):
+        """
+            Fit the trees using GPU
+        """
+        n_streams = min(self.n_trees, MAX_GPU)
+        streams = [cp.cuda.Stream() for _ in range(n_streams)]
+
+        for stream_idx in range(n_streams):
+            with streams[stream_idx]:
+                for tree_idx in range(stream_idx, self.n_trees, n_streams):
+                    tree = self.trees[tree_idx]
+                    tree.rf_fit()
+
+        cp.cuda.Device().synchronize()
+    
     def fit_non_parallel(self, X, y):
         for tree in self.trees:
             len_sample = int(np.round(len(X) * self.percent_len_sample_forest))

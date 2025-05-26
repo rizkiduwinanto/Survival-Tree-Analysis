@@ -1,0 +1,102 @@
+import pandas as pd
+import numpy as np
+from tree import AFTSurvivalTree
+from forest import AFTForest
+from dataset import SupportDataset, SyntheticDataset, VeteranLungDataset
+import time
+from runner import tune_model
+from utils import dump_results_to_csv
+import argparse
+
+def run(args):
+    type_algo = args[0]
+    dataset = args[1]
+    path_to_save = args[2] 
+    path_res = args[3]
+    n_tries = args[4]
+    n_models = args[5]
+    n_splits = args[6]
+    is_grid = args[7]
+    is_cv = args[8]
+    function = args[9]
+
+    if dataset.lower() == "veteran":
+        df = pd.read_csv('data/veterans_lung_cancer.csv')
+        data = VeteranLungDataset(df)
+    elif dataset.lower() == "support":
+        df = pd.read_csv('data/support2.csv')
+        data = SupportDataset(df)
+    else:
+        raise ValueError("Dataset not found")
+
+    X_train, X_test, y_train, y_test = data.get_train_test()
+
+    fixed_params = {
+        'function': function,
+    }
+
+    if type_algo.lower() == "aftforest": 
+        res = tune_model(
+            model="AFTForest",
+            x_train=X_train,
+            y_train=y_train,
+            x_test=X_test,
+            y_test=y_test,
+            custom_param_grid=None,
+            n_tries=n_tries,
+            n_models=n_models,
+            n_splits=n_splits,
+            is_grid=is_grid,
+            is_cv=is_cv,
+            **fixed_params
+        )
+    elif type_algo.lower() == "afttree":
+        res = tune_model(
+            model="AFTSurvivalTree",
+            x_train=X_train,
+            y_train=y_train,
+            x_test=X_test,
+            y_test=y_test,
+            custom_param_grid=None,
+            n_tries=n_tries,
+            n_models=n_models,
+            n_splits=n_splits,
+            is_grid=is_grid,
+            is_cv=is_cv,
+            **fixed_params
+        )
+    else:
+        raise ValueError("Algorithm not found")
+
+    print("Results: ", res)
+    dump_results_to_csv(res, path_res)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run AFT Forest/Tree Experiment')
+    parser.add_argument('--parameter', type=str, help='Type of algorithm')
+    parser.add_argument('--dataset', type=str, help='Dataset')
+    parser.add_argument('--path', type=str, help='Path to save tree')  
+    parser.add_argument('--path-results', type=str, help='Path to save results')
+    parser.add_argument('--n_tries', type=int, default=5, help='Number of tries')
+    parser.add_argument('--n_models', type=int, default=5, help='Number of models')
+    parser.add_argument('--n_splits', type=int, default=5, help='Number of splits for cross-validation')
+    parser.add_argument('--is_grid', action=argparse.BooleanOptionalAction, help='Is grid search')
+    parser.add_argument('--is_cv', action=argparse.BooleanOptionalAction, help='Is cross-validation')
+    parser.add_argument('--function', type=str, default='lognormal', help='Distribution function to use')
+
+    args = parser.parse_args()
+
+    run([
+        args.parameter,
+        args.dataset,
+        args.path,
+        args.path_results,
+        args.n_tries,
+        args.n_models,  
+        args.n_splits,
+        args.is_grid,
+        args.is_cv,
+        args.function
+    ])
+
+

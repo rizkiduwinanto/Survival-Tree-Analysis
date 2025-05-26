@@ -8,18 +8,18 @@
     "is_custom_dist": true,
     "is_bootstrap": false,
     "tree": {
-        "feature_index": 0,
+        "feature_index": null,
         "threshold": null,
         "loss": null,
-        "num_sample": 87,
-        "value": 119.39080459770115,
+        "num_sample": 88,
+        "value": 125.55681818181819,
         "max_depth": null,
         "left": null,
         "right": null
     },
     "custom_dist_type": "Weibull",
     "custom_dist_params": {
-        "rho": 1.823522181364416,
-        "lambda": 941.6238684665907
+        "rho": 1.2177495678664898,
+        "lambda": 530.1978907470099
     }
 }
