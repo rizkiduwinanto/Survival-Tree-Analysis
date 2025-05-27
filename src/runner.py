@@ -1,12 +1,8 @@
-from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold
 from tqdm import tqdm
 import itertools
 import numpy as np
-import pandas as pd
 import random
-import matplotlib.pyplot as plt
-import seaborn as sns
 from forest import AFTForest
 from tree import AFTSurvivalTree
 
@@ -22,6 +18,7 @@ param_grid = {
     'percent_len_sample': [0.5, 0.75],
     'percent_len_sample_forest': [0.5, 0.75],
     'test_size': [0.2, 0.3],
+    'n_components': [1, 2, 5, 10],
 }
 
 def run_n_models(model, x_train, y_train, x_test, y_test, prefix=None, n_models=10, **model_params):
@@ -66,7 +63,7 @@ def cross_validate(model, x, y, n_splits=5, prefix=None, **model_params):
             one_model = AFTForest(random_state=42, **model_params)
         elif model == "AFTSurvivalTree":
             params = {
-                'function': model_params['function'],
+                'function': model_params.get('function', 'norm'),
                 'is_bootstrap': model_params.get('is_bootstrap', False),
                 'is_custom_dist': model_params.get('is_custom_dist', False),
                 'n_components': model_params.get('n_components', 1),
@@ -115,7 +112,9 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
 
         params = {
             **hyperparam_dict,
-            'function': kwargs['function']
+            'function': kwargs.get('function', 'norm'),
+            'is_bootstrap': kwargs.get('is_bootstrap', False),
+            'is_custom_dist': kwargs.get('is_custom_dist', False),
         }
 
         if is_cv:

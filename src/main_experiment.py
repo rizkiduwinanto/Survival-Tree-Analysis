@@ -19,6 +19,8 @@ def run(args):
     is_grid = args[7]
     is_cv = args[8]
     function = args[9]
+    is_bootstrap = args[10]
+    is_custom_dist = args[11]
 
     if dataset.lower() == "veteran":
         df = pd.read_csv('data/veterans_lung_cancer.csv')
@@ -33,6 +35,8 @@ def run(args):
 
     fixed_params = {
         'function': function,
+        'is_bootstrap': is_bootstrap,
+        'is_custom_dist': is_custom_dist,
     }
 
     if type_algo.lower() == "aftforest": 
@@ -83,6 +87,8 @@ if __name__ == "__main__":
     parser.add_argument('--is_grid', action=argparse.BooleanOptionalAction, help='Is grid search')
     parser.add_argument('--is_cv', action=argparse.BooleanOptionalAction, help='Is cross-validation')
     parser.add_argument('--function', type=str, default='lognormal', help='Distribution function to use')
+    parser.add_argument('--is_bootstrap', action=argparse.BooleanOptionalAction, help='Is bootstrap')
+    parser.add_argument('--is_custom_dist', action=argparse.BooleanOptionalAction, help='Is custom distribution')
 
     args = parser.parse_args()
 
@@ -96,7 +102,9 @@ if __name__ == "__main__":
         args.n_splits,
         args.is_grid,
         args.is_cv,
-        args.function
+        args.function,
+        args.is_bootstrap,
+        args.is_custom_dist
     ])
 
 
