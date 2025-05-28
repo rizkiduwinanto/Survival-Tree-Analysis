@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --job-name=Tree-3
+#SBATCH --output=Tree-3.out
+#SBATCH --time=36:00:00
+#SBATCH --cpus-per-task=10
+#SBATCH --mem-per-cpu=10GB
+
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-nff.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=norm --no-is_bootstrap --no-is_custom_dist 
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-eff.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=extreme --no-is_bootstrap --no-is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-lff.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=logistic --no-is_bootstrap --no-is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-nft.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=norm --no-is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-eft.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=extreme --no-is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-lft.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=logistic --no-is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-ntt.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=norm --is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-ett.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=extreme --is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-ltt.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=logistic --is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-wft.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=weibull --no-is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-wtt.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=weibull --is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-gft.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=gmm --n_components=5 --no-is_bootstrap --is_custom_dist
+/home4/$USER/venvs/umcg_env/bin/python3 /home4/$USER/Survival-Tree-Analysis/src/main.py --parameter=AFTSurvivalTree --dataset=support --path=tree-gtt.json --max_depth=5 --min_samples_split=50 --min_samples_leaf=10 --sigma=0.05 --function=gmm --n_components=5 --is_bootstrap --is_custom_dist
