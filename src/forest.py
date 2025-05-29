@@ -19,6 +19,20 @@ MAX_GPU = 8  # Maximum number of GPU streams to use for parallel fitting
 class AFTForest():
     """
         Survival Regression Forest for AFTLoss
+
+        Parameters:
+        ---------
+        n_trees: int, default=10
+            Number of trees in the forest.
+        percent_len_sample_forest: float, default=0.37
+            Percentage of the length of the sample to use for each tree in the forest.
+        is_feature_subsample: bool, default=False
+            Whether to subsample features for each tree.
+        random_state: int, default=42
+            Random state for reproducibility.
+        split_fitting: bool, default=False
+            Whether to use split fitting for the trees.
+        **kwargs: dict
     """
     def __init__(
         self, 
@@ -29,10 +43,6 @@ class AFTForest():
         split_fitting=False,
         **kwargs
     ):
-        """
-            n_trees: number of trees in the forest
-            percent_len_sample: percentage of the sample to be used for each tree
-        """
         self.default_params = {
             "max_depth": 5,
             "min_samples_split": 5,

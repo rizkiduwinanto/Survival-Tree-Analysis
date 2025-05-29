@@ -9,15 +9,15 @@ from tree import AFTSurvivalTree
 random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
 
 param_grid = {
-    'n_trees': [10, 50, 100],
+    'n_trees': [10, 20, 50, 70, 100],
     'max_depth': [5, 10, 15],
     'min_samples_split': [2, 5],
     'min_samples_leaf': [1, 2],
-    'sigma': [0.1, 0.5, 1.0],
+    'sigma': [0.01, 0.05, 0.1, 0.5, 0.75, 1.0],
     'n_samples': [100, 200],
-    'percent_len_sample': [0.5, 0.75],
-    'percent_len_sample_forest': [0.5, 0.75],
-    'test_size': [0.2, 0.3],
+    'percent_len_sample': [0.25, 0.5, 0.75],
+    'percent_len_sample_forest': [0.37, 0.5, 0.75],
+    'test_size': [0.1, 0.2, 0.3],
     'n_components': [1, 2, 5, 10],
 }
 
@@ -47,7 +47,7 @@ def run_n_models(model, x_train, y_train, x_test, y_test, prefix=None, n_models=
 
     return c_indexes, brier_scores, maes
 
-def cross_validate(model, x, y, n_splits=5, prefix=None, **model_params):
+def cross_validate(model, x, y, combinations_index, n_splits=5, prefix=None, **model_params):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
     c_indexes = []
     brier_scores = []
@@ -85,7 +85,7 @@ def cross_validate(model, x, y, n_splits=5, prefix=None, **model_params):
 
         #save the model if needed
         prefix = prefix if prefix else "model"
-        one_model.save(f"{prefix}_fold_{index+1}")
+        one_model.save(f"{prefix}_fold_{combinations_index+1}_{index+1}")
 
         index += 1
 
@@ -107,6 +107,8 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
         else:
             raise ValueError("Not enough combinations to sample from.")
 
+    combinations_index = 0
+
     for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
         hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
 
@@ -120,7 +122,7 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
         if is_cv:
             x = np.concatenate([x_train, x_test], axis=0)
             y = np.concatenate([y_train, y_test], axis=0)
-            c_indexes, briers, maes = cross_validate(model, x, y, n_splits=n_splits, **params)
+            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index= combinations_index, n_splits=n_splits, **params)
         else:
             c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, **params)
         
@@ -133,6 +135,8 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
             'mean_brier_score': np.mean(briers),
             'mean_mae': np.mean(maes)
         })
+
+        combinations_index += 1
 
     return results
     

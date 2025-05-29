@@ -19,6 +19,33 @@ from sklearn.model_selection import train_test_split
 class AFTSurvivalTree():
     """
         Regression tree that implements AFTLoss
+
+        Parameters
+        ----------
+        max_depth : int, optional
+            Maximum depth of the tree. Default is 5.
+        min_samples_split : int, optional
+            Minimum number of samples required to split an internal node. Default is 5.
+        min_samples_leaf : int, optional
+            Minimum number of samples required to be at a leaf node. Default is 5.
+        sigma : float, optional
+            Standard deviation for the loss function. Default is 0.5.
+        function : str, optional
+            Distribution function to use for the loss calculation. Options are "norm", "logistic", "extreme", "weibull", "gmm", "gmm_new". Default is "norm".
+        is_custom_dist : bool, optional
+            Whether to use a custom distribution for the loss calculation. Default is False.
+        is_bootstrap : bool, optional
+            Whether to use bootstrap sampling for fitting the custom distribution. Default is False.
+        n_components : int, optional
+            Number of components for Gaussian Mixture Model (GMM) if using GMM distribution. Default is 10.
+        n_samples : int, optional
+            Number of samples to use for bootstrap sampling if `is_bootstrap` is True. Default is 1000.
+        percent_len_sample : float, optional
+            Percentage of the length of the sample to use for bootstrap sampling if `is_bootstrap` is True. Default is 0.8.
+        test_size : float, optional
+            Proportion of the dataset to include in the test split when using `train_test_split`. Default is 0.2.
+        mode : str, optional
+            Mode for building the tree. Options are "recursive", "bfs" (breadth-first search), or "dfs" (depth-first search). Default is "bfs".
     """
     def __init__(
         self, 
