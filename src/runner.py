@@ -91,7 +91,7 @@ def cross_validate(model, x, y, combinations_index, n_splits=5, prefix=None, **m
 
     return c_indexes, brier_scores, maes
 
-def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, **kwargs):
+def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, prefix=None, **kwargs):
     results =[]
 
     if custom_param_grid is None:
@@ -102,6 +102,7 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
     if not is_grid:
         random.shuffle(combinations)
         if len(combinations) > n_tries:
+            np.random.seed(42)
             combination_indices = np.random.choice(len(combinations), size=n_tries, replace=False)
             combinations = [combinations[i] for i in combination_indices]
         else:
@@ -122,9 +123,9 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
         if is_cv:
             x = np.concatenate([x_train, x_test], axis=0)
             y = np.concatenate([y_train, y_test], axis=0)
-            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index= combinations_index, n_splits=n_splits, **params)
+            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index=combinations_index, n_splits=n_splits, prefix=prefix, **params)
         else:
-            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, **params)
+            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, prefix=prefix, **params)
         
         results.append({
             'hyperparams': hyperparam_dict,
