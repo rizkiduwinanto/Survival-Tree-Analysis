@@ -152,11 +152,14 @@ class VeteranLungDataset():
     def get_data(self):
         return self.data
 
-class NHANES():
+class NHANESDataset():
     def __init__(self):
         self.data, self.label_shap = shap.datasets.nhanesi()
         self.label = self.create_label()
         self.xgboost_label = self.create_xgboost_label()
+
+        self.data = self.data.to_numpy()
+        print(self.data.dtypes)
     
     def create_label(self):
         label = pd.DataFrame()
@@ -187,6 +190,8 @@ class NHANES():
 
     def get_train_test(self, test_size=0.2, random_state=42):
         x_train, y_train, x_test, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
+
+        print("Type of x_train:", type(x_train))
         return x_train, y_train, x_test, y_test
 
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):

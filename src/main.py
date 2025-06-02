@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from tree import AFTSurvivalTree
 from forest import AFTForest
-from dataset import SupportDataset, SyntheticDataset, VeteranLungDataset
+from dataset import SupportDataset, SyntheticDataset, VeteranLungDataset, NHANESDataset
 from sklearn.model_selection import train_test_split
 import time
 import argparse
@@ -53,6 +53,8 @@ def run(args):
     elif dataset.lower() == "support":
         df = pd.read_csv('data/support2.csv')
         data = SupportDataset(df)
+    elif dataset.lower() == "nhanes":
+        data = NHANESDataset()
     else:
         raise ValueError("Dataset not found")
     

@@ -6,6 +6,10 @@ import random
 from forest import AFTForest
 from tree import AFTSurvivalTree
 
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+
 random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
 
 param_grid = {
@@ -102,7 +106,6 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
     if not is_grid:
         random.shuffle(combinations)
         if len(combinations) > n_tries:
-            np.random.seed(42)
             combination_indices = np.random.choice(len(combinations), size=n_tries, replace=False)
             combinations = [combinations[i] for i in combination_indices]
         else:
@@ -119,6 +122,8 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
             'is_bootstrap': kwargs.get('is_bootstrap', False),
             'is_custom_dist': kwargs.get('is_custom_dist', False),
         }
+
+        print("Hyperparameters:", hyperparam_dict)
 
         if is_cv:
             x = np.concatenate([x_train, x_test], axis=0)
