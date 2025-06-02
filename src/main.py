@@ -149,6 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('--is_custom_dist', action=argparse.BooleanOptionalAction, help='Is custom distribution')
     parser.add_argument('--is_feature_subsample', action=argparse.BooleanOptionalAction, help='Is feature selection')
     parser.add_argument('--percent_feature_sample', type=float, default=0.33, help='Percent feature length sample')
+    parser.add_argument('--fold-index', type=int, default=0, help='Fold index for cross-validation')
     
     args = parser.parse_args()
 

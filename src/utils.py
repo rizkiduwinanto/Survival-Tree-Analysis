@@ -27,5 +27,8 @@ def plot_survival_trees(y_true, y_pred, censored):
     ax.set_ylabel('Predicted survival time (years)')
     ax.legend()
 
+def dump_results_to_csv(results, path="results.csv"):
+    df = pd.DataFrame(results)
+    df.to_csv(path, index=False)
 
 

@@ -2,3 +2,4 @@
 src/.ipynb_checkpoints
 env
 logs
+src/models

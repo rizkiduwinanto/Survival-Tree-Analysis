@@ -1,0 +1,25 @@
+{
+    "max_depth": 5,
+    "min_samples_split": 5,
+    "min_samples_leaf": 5,
+    "sigma": 0.5,
+    "function": "weibull",
+    "epsilon": 1e-11,
+    "is_custom_dist": true,
+    "is_bootstrap": false,
+    "tree": {
+        "feature_index": null,
+        "threshold": null,
+        "loss": null,
+        "num_sample": 88,
+        "value": 125.55681818181819,
+        "max_depth": null,
+        "left": null,
+        "right": null
+    },
+    "custom_dist_type": "Weibull",
+    "custom_dist_params": {
+        "rho": 1.2177495678664898,
+        "lambda": 530.1978907470099
+    }
+}
