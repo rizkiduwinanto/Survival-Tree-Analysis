@@ -1,9 +1,5 @@
 import pandas as pd
-import numpy as np
-from tree import AFTSurvivalTree
-from forest import AFTForest
-from dataset import SupportDataset, SyntheticDataset, VeteranLungDataset
-import time
+from dataset import SupportDataset, VeteranLungDataset, NHANESDataset
 from runner import tune_model
 from utils import dump_results_to_csv
 import argparse
@@ -28,11 +24,12 @@ def run(args):
     elif dataset.lower() == "support":
         df = pd.read_csv('data/support2.csv')
         data = SupportDataset(df)
+    elif dataset.lower() == "nhanes":
+        data = NHANESDataset()
     else:
         raise ValueError("Dataset not found")
 
     X_train, X_test, y_train, y_test = data.get_train_test()
-
     fixed_params = {
         'function': function,
         'is_bootstrap': is_bootstrap,
