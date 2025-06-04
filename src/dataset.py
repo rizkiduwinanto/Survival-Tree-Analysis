@@ -153,13 +153,21 @@ class VeteranLungDataset():
         return self.data
 
 class NHANESDataset():
-    def __init__(self):
+    def __init__(self, convert_bool=True):
         self.data, self.label_shap = shap.datasets.nhanesi()
+
+        self.preprocess(convert_bool)
+
         self.label = self.create_label()
         self.xgboost_label = self.create_xgboost_label()
 
         self.data = self.data.to_numpy()
-        print(self.data.dtypes)
+
+    def preprocess(self, convert_bool):
+        self.data.fillna(self.data.median())
+
+        if convert_bool:
+            self.convert_bool_to_int()
     
     def create_label(self):
         label = pd.DataFrame()
@@ -197,6 +205,9 @@ class NHANESDataset():
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):
         x_train, y_train, x_test, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
         return x_train, y_train, x_test, y_test
+    
+    def convert_bool_to_int(self):
+        self.data.replace({False: 0, True: 1}, inplace=True)
 
 class SyntheticDataset():
     def __init__(self, n_censored, n_uncensored, n_feature=2):

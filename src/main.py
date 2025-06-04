@@ -27,6 +27,8 @@ def run(args):
     test_size = args[15]
     is_feature_subsample = args[16]
     percent_feature_sample = args[17]
+    is_split_fitting = args[18]
+    aggregator = args[19]
 
     print("Type: ", type_algo)
     print("Dataset: ", dataset)
@@ -46,6 +48,8 @@ def run(args):
     print("Sigma: ", sigma)
     print("Is feature subsample: ", is_feature_subsample)
     print("Percent feature sample: ", percent_feature_sample)
+    print("Is split fitting: ", is_split_fitting)
+    print("Aggregator: ", aggregator)
 
     if dataset.lower() == "veteran":
         df = pd.read_csv('data/veterans_lung_cancer.csv')
@@ -72,7 +76,8 @@ def run(args):
                 "sigma": sigma,
                 "n_samples": n_samples,
                 "percent_len_sample": percent_len_sample,
-                "test_size": test_size
+                "test_size": test_size,
+                "aggregator": aggregator
             }
         else:
             kwargs = {
@@ -86,7 +91,8 @@ def run(args):
                 "sigma": sigma,
                 "n_samples": n_samples,
                 "percent_len_sample": percent_len_sample,
-                "test_size": test_size
+                "test_size": test_size,
+                "aggregator": aggregator
             }
 
         aft_forest = AFTForest(
@@ -94,6 +100,7 @@ def run(args):
             percent_len_sample_forest=percent_len_sample_forest, 
             is_feature_subsample=is_feature_subsample,
             random_state=42,
+            split_fitting=is_split_fitting,
             **kwargs
         )
 
@@ -107,7 +114,7 @@ def run(args):
 
         path = aft_forest.save(path_to_save)
         print("Path: ", path)
-    elif type_algo.lower() == "aftsurvivaltree":
+    elif type_algo.lower() == "afttree":
         aft_tree = AFTSurvivalTree(
             function=function.lower(), 
             is_bootstrap=is_bootstrap, 
@@ -119,7 +126,8 @@ def run(args):
             sigma=sigma,
             n_samples=n_samples,
             percent_len_sample=percent_len_sample,
-            test_size=test_size
+            test_size=test_size,
+            aggregator=aggregator,
         )
         start = time.time()
         aft_tree.fit(X_train, y_train)
@@ -151,7 +159,8 @@ if __name__ == "__main__":
     parser.add_argument('--is_custom_dist', action=argparse.BooleanOptionalAction, help='Is custom distribution')
     parser.add_argument('--is_feature_subsample', action=argparse.BooleanOptionalAction, help='Is feature selection')
     parser.add_argument('--percent_feature_sample', type=float, default=0.33, help='Percent feature length sample')
-    parser.add_argument('--fold-index', type=int, default=0, help='Fold index for cross-validation')
+    parser.add_argument('--is_split_fitting', action=argparse.BooleanOptionalAction, help='Is split fitting')
+    parser.add_argument('--aggregator', type=str, default='mean', help='Aggregator function for AFTForest')
     
     args = parser.parse_args()
 
@@ -173,5 +182,7 @@ if __name__ == "__main__":
         args.percent_data_sample_forest,
         args.test_size,
         args.is_feature_subsample,
-        args.percent_feature_sample
+        args.percent_feature_sample,
+        args.is_split_fitting,
+        args.aggregator
     ])

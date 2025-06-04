@@ -60,7 +60,8 @@ class AFTSurvivalTree():
         n_samples=1000,
         percent_len_sample=0.8,
         test_size=0.2,
-        mode="bfs"
+        mode="bfs",
+        aggregator="mean"
     ):
         self.tree = None
         self.max_depth = (2**31) - 1 if max_depth is None else max_depth
@@ -77,6 +78,7 @@ class AFTSurvivalTree():
         self.percent_len_sample = percent_len_sample
         self.test_size = test_size
         self.mode = mode
+        self.aggregator = aggregator
 
         self.X_train = None
         self.y_death_train = None
@@ -172,8 +174,10 @@ class AFTSurvivalTree():
         return
 
     def build_tree(self, X, y_death, y_time, depth=0):   
+        value = self.mean_y(y_time) if self.aggregator == "mean" else self.median_y(y_time)
+
         if depth > self.max_depth or len(y_time) < self.min_samples_split:
-            node = TreeNode(None, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
+            node = TreeNode(None, None, value, None, None, num_sample=len(y_time))
             if depth == 0: 
                 self.tree = node
             return node
@@ -181,7 +185,7 @@ class AFTSurvivalTree():
         split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X, y_death, y_time)
 
         if split is None and feature is None:
-            node = TreeNode(None, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
+            node = TreeNode(None, None, value, None, None, num_sample=len(y_time))
             if depth == 0: 
                 self.tree = node
             return node
@@ -195,13 +199,13 @@ class AFTSurvivalTree():
         
 
         if len( y_time_left) == 0 or len(y_time_right) == 0:
-            node = TreeNode(None, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
+            node = TreeNode(None, None, value, None, None, num_sample=len(y_time))
             if depth == 0: 
                 self.tree = node
             return node
 
         if len(X_left) < self.min_samples_leaf or len(X_right) < self.min_samples_leaf:
-            node = TreeNode(feature, None, self.mean_y(y_time), None, None, num_sample=len(y_time))
+            node = TreeNode(feature, None, value, None, None, num_sample=len(y_time))
             if depth == 0:
                 self.tree = node
             return node
@@ -235,14 +239,16 @@ class AFTSurvivalTree():
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
+            value = self.mean_y(y_time_current) if self.aggregator == "mean" else self.median_y(y_time_current)
+
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
-                parent_node.set_value(self.mean_y(y_time_current))
+                parent_node.set_value(value)
                 continue
             
             split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_death_current, y_time_current)
 
             if split is None and feature is None:
-                parent_node.set_value(self.mean_y(y_time_current))
+                parent_node.set_value(value)
                 continue
 
             X_left = X[left_indices]
@@ -253,11 +259,11 @@ class AFTSurvivalTree():
             y_time_right = y_time[right_indices]
 
             if len(X_left) == 0 or len(X_right) == 0:
-                parent_node.set_value(self.mean_y(y_time_current))
+                parent_node.set_value(value)
                 continue
 
             if (len(y_time_left) < self.min_samples_leaf) or (len(y_time_right) < self.min_samples_leaf):
-                parent_node.set_value(self.mean_y(y_time_current))
+                parent_node.set_value(value)
             else:
                 parent_node.set_feature_index(feature)
                 parent_node.set_threshold(split)
@@ -306,14 +312,16 @@ class AFTSurvivalTree():
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
+            value = self.mean_y(y_time_current) if self.aggregator == "mean" else self.median_y(y_time_current)
+
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
-                parent_node.set_value(self.mean_y(y_time_current))
+                parent_node.set_value(value)
                 continue
             
             split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_death_current, y_time_current)
 
             if split is None and feature is None:
-                parent_node.set_value(self.mean_y(y_time_current))
+                parent_node.set_value(value)
                 continue
 
             X_left = X[left_indices]
@@ -324,7 +332,7 @@ class AFTSurvivalTree():
             y_time_right = y_time[right_indices]
 
             if (len(y_time_left) < self.min_samples_leaf) or (len(y_time_right) < self.min_samples_leaf):
-                parent_node.set_value(self.mean_y(y_time_current))
+                parent_node.set_value(value)
             else:
                 parent_node.set_feature_index(feature)
                 parent_node.set_threshold(split)
@@ -372,10 +380,10 @@ class AFTSurvivalTree():
                 left_y = sorted_y[:i]
                 right_y = sorted_y[i:]
 
-                mean_y = self.mean_y(y)
+                pred = self.mean_y(sorted_y) if self.aggregator == "mean" else self.median_y(sorted_y)
 
-                left_loss = self.calculate_loss(left_y, mean_y)
-                right_loss = self.calculate_loss(right_y, mean_y)
+                left_loss = self.calculate_loss(left_y, pred)
+                right_loss = self.calculate_loss(right_y, pred)
 
                 total_loss = left_loss + right_loss
 
@@ -422,7 +430,12 @@ class AFTSurvivalTree():
         n_samples = len(X)
         n_features = len(X[0])
 
-        mean_y = self.mean_y(y_time)
+        if self.aggregator == "mean":
+            pred = self.mean_y(y_time)
+        elif self.aggregator == "median":
+            pred = self.median_y(y_time)
+        else:
+            raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
 
         n_streams = n_features
         streams = [cp.cuda.Stream() for _ in range(n_streams)]
@@ -456,8 +469,8 @@ class AFTSurvivalTree():
                 if len(thresholds) == 0:
                     return
 
-                left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in left_mask])
-                right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in right_mask])
+                left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in left_mask])
+                right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in right_mask])
 
                 total_loss = left_loss + right_loss
 
@@ -497,7 +510,12 @@ class AFTSurvivalTree():
         n_samples = len(X)
         n_features = len(X[0])
 
-        mean_y = self.mean_y(y_time)
+        if self.aggregator == "mean":
+            pred = self.mean_y(y_time)
+        elif self.aggregator == "median":
+            pred = self.median_y(y_time)
+        else:
+            raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
 
         for feature in range(n_features):
             feature_values = X[:, feature]
@@ -518,8 +536,8 @@ class AFTSurvivalTree():
             if len(thresholds) == 0:
                 continue
 
-            left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in left_mask])
-            right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=mean_y) for mask in right_mask])
+            left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in left_mask])
+            right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in right_mask])
 
             total_loss = left_loss + right_loss
 
@@ -603,6 +621,9 @@ class AFTSurvivalTree():
 
     def mean_y(self, y_time):
         return cp.mean(y_time)
+
+    def median_y(self, y_time):
+        return cp.median(y_time)
 
     def predict(self, X):
         if self.tree is None:

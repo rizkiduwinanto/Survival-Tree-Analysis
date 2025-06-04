@@ -86,6 +86,7 @@ class AFTForest():
             "n_samples": self.default_params['n_samples'] if "n_samples" not in kwargs else kwargs["n_samples"],
             "percent_len_sample": self.default_params['percent_len_sample'] if "percent_len_sample" not in kwargs else kwargs["percent_len_sample"],
             "test_size": self.default_params['test_size'] if "test_size" not in kwargs else kwargs["test_size"],
+            "aggregator": kwargs.get("aggregator", "mean")
         }
         return args
 
