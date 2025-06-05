@@ -3,7 +3,7 @@ import cupy as cp
 from node import TreeNode
 from distribution import Weibull, LogLogistic, LogNormal, LogExtreme, GMM, GMM_New
 from math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
-from tree_utils import gpu_train_test_split
+from tree_utils import stratified_gpu_train_test_split
 from lifelines.utils import concordance_index
 import graphviz
 import uuid
@@ -113,7 +113,7 @@ class AFTSurvivalTree():
                 self.y_time_train = y['d.time']
 
             else:
-                X_train, _, y_train, y_dist = train_test_split(X, y, test_size=self.test_size, random_state=random_state)
+                X_train, _, y_train, y_dist = train_test_split(X, y, stratify=y['death'], test_size=self.test_size, random_state=random_state)
                 self.custom_dist.fit(y_dist)
 
                 self.X_train = X_train
@@ -148,7 +148,7 @@ class AFTSurvivalTree():
                 y_death_gpu = cp.asarray(y['death'])
                 y_time_gpu = cp.asarray(y['d.time'])
 
-                X_train, y_death_train, y_time_train, X_test, y_death_test, y_time_test = gpu_train_test_split(X_gpu, y_death_gpu, y_time_gpu, test_size=self.test_size, random_state=random_state)
+                X_train, y_death_train, y_time_train, X_test, y_death_test, y_time_test = stratified_gpu_train_test_split(X_gpu, y_death_gpu, y_time_gpu, test_size=self.test_size, random_state=random_state)
 
                 y_death_test_cpu = cp.asnumpy(y_death_test)
                 y_time_test_cpu = cp.asnumpy(y_time_test)
