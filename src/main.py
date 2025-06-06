@@ -9,6 +9,11 @@ import argparse
 import cProfile
 
 def run(args):
+    """
+    Run the AFT Forest or AFT Tree algorithm based on the provided arguments.
+    This function initializes the dataset, splits it into training and testing sets,
+    """
+
     type_algo = args[0]
     dataset = args[1]
     path_to_save = args[2]

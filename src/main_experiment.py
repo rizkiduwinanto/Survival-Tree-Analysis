@@ -5,6 +5,10 @@ from utils import dump_results_to_csv
 import argparse
 
 def run(args):
+    """
+    Run the AFT Forest/Tree experiment based on the provided arguments.
+    """
+
     type_algo = args[0]
     dataset = args[1]
     path_to_save = args[2] 

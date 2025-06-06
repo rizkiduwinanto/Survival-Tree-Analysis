@@ -3,6 +3,14 @@ import cupy as cp
 import math
 import numba as nb
 
+"""
+This module contains utility functions for survival analysis, including
+probability density functions (PDF) and cumulative distribution functions (CDF)
+for normal, logistic, and extreme value distributions.
+These functions are optimized for performance using Numba and can be used   
+with both NumPy and CuPy arrays.
+"""
+
 @nb.jit(fastmath=True)
 def norm_pdf(y, pred, sigma):
     link_function = (np.log(y) - pred)/sigma
