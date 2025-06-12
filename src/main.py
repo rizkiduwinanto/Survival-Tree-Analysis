@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
-from tree import AFTSurvivalTree
-from forest import AFTForest
-from dataset import SupportDataset, SyntheticDataset, VeteranLungDataset, NHANESDataset
+from tree.tree import AFTSurvivalTree
+from forest.forest import AFTForest
+from dataset.veteran import VeteranLungDataset
+from dataset.support import SupportDataset
+from dataset.nhanes import NHANESDataset
 from sklearn.model_selection import train_test_split
 import time
 import argparse
-import cProfile
 
 def run(args):
     """

@@ -1,7 +1,9 @@
 import pandas as pd
-from dataset import SupportDataset, VeteranLungDataset, NHANESDataset
-from runner import tune_model
-from utils import dump_results_to_csv
+from dataset.veteran import VeteranLungDataset
+from dataset.support import SupportDataset
+from dataset.nhanes import NHANESDataset
+from utils.runner import tune_model
+from utils.utils import dump_results_to_csv
 import argparse
 
 def run(args):

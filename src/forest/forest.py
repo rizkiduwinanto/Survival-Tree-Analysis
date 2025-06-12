@@ -1,9 +1,8 @@
 import numpy as np
 from joblib import Parallel, delayed
 import json
-import time
 import multiprocessing
-from tree import AFTSurvivalTree
+from tree.tree import AFTSurvivalTree
 from lifelines.utils import concordance_index
 from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
 from sklearn.metrics import mean_absolute_error
@@ -71,8 +70,10 @@ class AFTForest():
 
     # Tuning search for hyperparameters 
     def _get_params(self, **kwargs):
-        """f
+        """
             Get the parameters for the tree
+            params: keyword arguments for the tree
+            Returns: dict of parameters for the tree
         """
         args = {
             "max_depth": self.default_params['max_depth'] if "max_depth" not in kwargs else kwargs["max_depth"],
@@ -91,16 +92,37 @@ class AFTForest():
         return args
 
     def fit(self, X, y):
+        """
+            Fit the forest to the data
+            X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            y: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+        """
+        # if split fitting is enabled, we will use the GPU to fit the trees, but first we will prefit the trees on the CPU in case of custom distributions parallely
         if self.split_fitting:
             self.prefitting(X, y)
             self.fit_gpu()
         else:
+            # else just fit the trees in parallel using cpu
             self.trees = list(tqdm(Parallel(n_jobs=multiprocessing.cpu_count())(
                 delayed(self._fit_tree)(self.trees[idx], X, y, self.random_state + idx) for idx in range(len(self.trees))),
                 total=self.n_trees
             ))
 
     def _fit_tree(self, tree, X, y, random_state=None):
+        """
+            Fit a single tree to the data
+            tree: AFTSurvivalTree
+                The tree to fit.
+            X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            y: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+            random_state: int, optional
+                Random state for reproducibility.
+        """
+
         len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
         X_sample, y_sample = self.data_sample(X, y, len_sample, random_state=random_state)
 
@@ -114,7 +136,11 @@ class AFTForest():
 
     def prefitting(self, X, y):
         """
-            Prefit the trees with the data
+            Prefit the trees on the CPU before fitting on the GPU
+            X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            y: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
         """
         self.trees = list(tqdm(Parallel(n_jobs=multiprocessing.cpu_count())(
             delayed(self._prefit)(self.trees[idx], X, y, self.random_state + idx) for idx in range(len(self.trees))),
@@ -122,6 +148,17 @@ class AFTForest():
         ))
 
     def _prefit(self, tree, X, y, random_state=None):
+        """
+            Prefit a single tree to the data
+            tree: AFTSurvivalTree
+                The tree to prefit.
+            X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            y: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+            random_state: int, optional
+                Random state for reproducibility.
+        """
         len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
         X_sample, y_sample = self.data_sample(X, y, len_sample, random_state=random_state)
 
@@ -135,7 +172,10 @@ class AFTForest():
 
     def fit_gpu(self):
         """
-            Fit the trees using GPU
+            Fit the trees using GPU, using multiple streams for parallel fitting
+            This method uses cupy to handle GPU operations and parallelizes the fitting of trees across multiple GPU streams.
+            preconditions:
+            - The trees must be pre-fitted on the CPU if `split_fitting` is enabled.
         """
         n_streams = min(self.n_trees, MAX_GPU)
         streams = [cp.cuda.Stream() for _ in range(n_streams)]
@@ -147,21 +187,19 @@ class AFTForest():
                     tree.rf_fit()
 
         cp.cuda.Device().synchronize()
-    
-    def fit_non_parallel(self, X, y):
-        for tree in self.trees:
-            len_sample = int(np.round(len(X) * self.percent_len_sample_forest))
-            X_sample, y_sample = self.data_sample(X, y, len_sample)
-            
-            if self.is_feature_subsample:
-                len_feature_sample = int(np.round(X.shape[1] * self.percent_len_sample_forest))
-                X_sample = self.feature_subsample(X_sample, len_feature_sample)
-
-            tree.fit(X_sample, y_sample)
 
     def data_sample(self, X, y, len_sample, random_state=None):
         """
-            Sample the data for the tree
+            Subsample the data for each tree
+            param X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            param y: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+            param len_sample: int
+                The number of samples to sample.
+            param random_state: int, optional
+                Random state for reproducibility.
+            returns: tuple (X_sample, y_sample)
         """
         if random_state is not None:
             rng = np.random.RandomState(random_state)
@@ -171,7 +209,14 @@ class AFTForest():
 
     def feature_subsample(self, X, len_sample, random_state=None):
         """
-            Sample the data for the tree
+            Subsample the features for each tree
+            param X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            param len_sample: int
+                The number of features to sample.
+            param random_state: int, optional
+                Random state for reproducibility.
+            returns: np.ndarray, shape (n_samples, len_sample)
         """
         if random_state is not None:
             rng = np.random.RandomState(random_state)
@@ -181,10 +226,24 @@ class AFTForest():
         return X_sample
 
     def predict(self, X):
+        """
+            Predict the time for each sample in X
+            param X: np.ndarray, shape (n_samples, n_features)
+            The input data.
+            Returns: list of float
+                The predicted times for each sample.
+        """
         predictions = [self.get_prediction(x) for x in X]
         return predictions
 
     def get_prediction(self, X): 
+        """
+            Get the prediction for a single sample
+            param X: np.ndarray, shape (n_features,)
+                The input data for a single sample.
+            Returns: float
+                The predicted time for the sample.
+        """
         preds = []
         for tree in self.trees:
             preds.append(tree.predict(X))
@@ -194,6 +253,16 @@ class AFTForest():
         return mean
 
     def _score(self, X, y_true):
+        """
+            Compute the concordance index.
+            param X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            param y_true: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+            Returns: float
+                The concordance index between the predicted times and the true times.
+        """
+
         times_pred = self.predict(X)
         event_true = [1 if not censored else 0 for censored, _ in y_true]
         times_true = [time for _, time in y_true]
@@ -204,6 +273,12 @@ class AFTForest():
     def _brier(self, X, y):
         """
             Compute the Integrated Brier Score (IBS).
+            param X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            param y: list of tuples (censored, time)    
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+            Returns: float
+                The Integrated Brier Score between the predicted times and the true times.
         """
         pred_times = self.predict(X)
 
@@ -223,6 +298,11 @@ class AFTForest():
     def _auc(self, X, y):
         """
             Compute the Area Under the Curve (AUC).
+            param X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            param y: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+            Returns: tuple (auc, mean_auc)
         """
         pred_times = self.predict(X)
 
@@ -242,6 +322,12 @@ class AFTForest():
     def _mae(self, X, y):
         """
             Compute the Mean Absolute Error (MAE).
+            param X: np.ndarray, shape (n_samples, n_features)
+                The input data.
+            param y: list of tuples (censored, time)
+                The target data, where each tuple contains a boolean indicating if the event is censored and the time of the event.
+            Returns: float
+                The Mean Absolute Error between the predicted times and the true times.
         """
         pred_times = self.predict(X)
 
@@ -252,6 +338,14 @@ class AFTForest():
         return mae
 
     def save(self, path):
+        """
+            Save the forest to a path
+            param: path: str
+                The path to save the forest directory containing the metadata and tree files.
+            Returns: str
+                The path to the saved forest directory.
+            Raises: OSError if the directory cannot be created.
+        """
         if not os.path.exists(MAIN_FOLDER):
             os.makedirs(MAIN_FOLDER)
 
@@ -278,6 +372,10 @@ class AFTForest():
     def load(cls, path):
         """
             Load a forest from a path
+            param: path: str
+                The path to the forest directory containing the metadata and tree files.
+            Returns: AFTForest instance
+            Raises: FileNotFoundError if the metadata file does not exist.  
         """
 
         metadata_path = os.path.join(path, "_metadata.json")

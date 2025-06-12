@@ -1,19 +1,21 @@
 import numpy as np
 import cupy as cp
-from node import TreeNode
-from distribution import Weibull, LogLogistic, LogNormal, LogExtreme, GMM, GMM_New
-from math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
-from tree_utils import stratified_gpu_train_test_split
+from .node import TreeNode
+from distribution.weibull import Weibull
+from distribution.norm import LogNormal
+from distribution.logistic import LogLogistic
+from distribution.extreme import LogExtreme
+from distribution.GMM import GMM, GMM_New
+from utils.math.math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
+from utils.utils import stratified_gpu_train_test_split
 from lifelines.utils import concordance_index
 import graphviz
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 import json
 from sklearn.model_selection import train_test_split
 from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
 from sklearn.metrics import mean_absolute_error
 from collections import deque
-from cupy.cuda import Stream
 from sklearn.model_selection import train_test_split
 
 class AFTSurvivalTree():
@@ -100,7 +102,71 @@ class AFTSurvivalTree():
             else:
                 raise ValueError("Custom distribution not supported")
 
+    def fit(self, X, y, random_state=42):
+        """
+        Fit the AFTSurvivalTree model to the training data.
+        :param X: array-like, shape (n_samples, n_features)
+            Training data features.
+        :param y: structured array, shape (n_samples,)
+            Training data labels with fields 'death' and 'd.time'.
+        :param random_state: int, optional
+            Random seed for reproducibility. Default is 42.
+        :return: None
+        """
+
+        if self.custom_dist is not None:
+            if self.is_bootstrap:
+                ## If bootstrap sampling is enabled, fit the whole dataset to the custom distribution
+                self.custom_dist.fit_bootstrap(y, n_samples=self.n_samples, percentage=self.percent_len_sample)
+
+                X_gpu = cp.asarray(X)
+                y_death_gpu = cp.asarray(y['death'])
+                y_time_gpu = cp.asarray(y['d.time'])
+
+            else:
+                X_gpu = cp.asarray(X)
+                y_death_gpu = cp.asarray(y['death'])
+                y_time_gpu = cp.asarray(y['d.time'])
+
+                ## If bootstrap sampling is not enabled, split the dataset into training and distribution sets
+                X_train, y_death_train, y_time_train, X_dist, y_death_dist, y_time_dist = stratified_gpu_train_test_split(X_gpu, y_death_gpu, y_time_gpu, test_size=self.test_size, random_state=random_state)
+
+                y_death_dist_cpu = cp.asnumpy(y_death_dist)
+                y_time_dist_cpu = cp.asnumpy(y_time_dist)
+
+                y_dist = np.rec.fromarrays([y_death_dist_cpu, y_time_dist_cpu], names=['death', 'd.time'])
+
+                self.custom_dist.fit(y_dist)
+
+                X_gpu = X_train
+                y_death_gpu = y_death_train
+                y_time_gpu = y_time_train
+        else:
+            ## If no custom distribution is used, use the whole dataset
+            X_gpu = cp.asarray(X)
+            y_death_gpu = cp.asarray(y['death'])
+            y_time_gpu = cp.asarray(y['d.time'])
+
+        if self.mode == "recursive":
+            self.build_tree(X_gpu, y_death_gpu, y_time_gpu)
+        elif self.mode == "bfs":
+            self.build_tree_bfs(X_gpu, y_death_gpu, y_time_gpu)
+        elif self.mode == "dfs":
+            self.build_tree_dfs(X_gpu, y_death_gpu, y_time_gpu)
+        return
+
     def prefit(self, X, y, random_state=None):
+        """
+        Pre-fit the AFTSurvivalTree model to the training data.
+        This method is used to set the training data and labels before building the tree.
+        Mainly used for Forest GPU Parallelization.
+        :param X: array-like, shape (n_samples, n_features)
+        :param y: structured array, shape (n_samples,)
+            Training data labels with fields 'death' and 'd.time'.
+        :param random_state: int, optional
+            Random seed for reproducibility. Default is None.
+        :return: None
+        """
         if self.custom_dist is None:
             self.X_train = X
             self.y_death_train = y['death']
@@ -121,7 +187,15 @@ class AFTSurvivalTree():
                 self.y_time_train = y_train['d.time']
         return
 
-    def rf_fit(self):
+    def special_fit(self):
+        """
+        Special fit method to build the tree only after pre-fitting the model with prefit.
+        This method is used to build the tree after the training data and labels have been set.
+
+        """
+        if self.X_train is None or self.y_death_train is None or self.y_time_train is None:
+            raise ValueError("Model must be pre-fitted with prefit method before calling special_fit.")
+
         X_gpu = cp.asarray(self.X_train)
         y_death_gpu = cp.asarray(self.y_death_train)
         y_time_gpu = cp.asarray(self.y_time_train)
@@ -134,46 +208,19 @@ class AFTSurvivalTree():
             self.build_tree_dfs(X_gpu, y_death_gpu, y_time_gpu)
         return
 
-    def fit(self, X, y, random_state=None):
-        if self.custom_dist is not None:
-            if self.is_bootstrap:
-                self.custom_dist.fit_bootstrap(y, n_samples=self.n_samples, percentage=self.percent_len_sample)
-
-                X_gpu = cp.asarray(X)
-                y_death_gpu = cp.asarray(y['death'])
-                y_time_gpu = cp.asarray(y['d.time'])
-
-            else:
-                X_gpu = cp.asarray(X)
-                y_death_gpu = cp.asarray(y['death'])
-                y_time_gpu = cp.asarray(y['d.time'])
-
-                X_train, y_death_train, y_time_train, X_test, y_death_test, y_time_test = stratified_gpu_train_test_split(X_gpu, y_death_gpu, y_time_gpu, test_size=self.test_size, random_state=random_state)
-
-                y_death_test_cpu = cp.asnumpy(y_death_test)
-                y_time_test_cpu = cp.asnumpy(y_time_test)
-
-                y_dist = np.rec.fromarrays([y_death_test_cpu, y_time_test_cpu], names=['death', 'd.time'])
-
-                self.custom_dist.fit(y_dist)
-
-                X_gpu = X_train
-                y_death_gpu = y_death_train
-                y_time_gpu = y_time_train
-        else:
-            X_gpu = cp.asarray(X)
-            y_death_gpu = cp.asarray(y['death'])
-            y_time_gpu = cp.asarray(y['d.time'])
-
-        if self.mode == "recursive":
-            self.build_tree(X_gpu, y_death_gpu, y_time_gpu)
-        elif self.mode == "bfs":
-            self.build_tree_bfs(X_gpu, y_death_gpu, y_time_gpu)
-        elif self.mode == "dfs":
-            self.build_tree_dfs(X_gpu, y_death_gpu, y_time_gpu)
-        return
-
     def build_tree(self, X, y_death, y_time, depth=0):   
+        """
+        Build the AFTSurvivalTree recursively.
+        :param X: array-like, shape (n_samples, n_features)
+        :param y_death: array-like, shape (n_samples,)
+            Binary array indicating whether the event (death) occurred.
+        :param y_time: array-like, shape (n_samples,)
+            Array of survival times.
+        :param depth: int, optional
+            Current depth of the tree. Default is 0.
+        :return: TreeNode
+        """
+
         value = self.mean_y(y_time) if self.aggregator == "mean" else self.median_y(y_time)
 
         if depth > self.max_depth or len(y_time) < self.min_samples_split:
@@ -218,7 +265,19 @@ class AFTSurvivalTree():
             self.tree = node
         return node
 
-    def build_tree_bfs(self, X, y_death, y_time, depth=0):     
+    def build_tree_bfs(self, X, y_death, y_time, depth=0): 
+        """
+        Build the AFTSurvivalTree using breadth-first search (BFS).
+        :param X: array-like, shape (n_samples, n_features)
+        :param y_death: array-like, shape (n_samples,)
+            Binary array indicating whether the event (death) occurred. 
+        :param y_time: array-like, shape (n_samples,)
+            Array of survival times.
+        :param depth: int, optional 
+            Current depth of the tree. Default is 0.
+        :return: TreeNode
+        """
+
         queue = deque()
         root = TreeNode(None, None, None, None, None, num_sample=len(y_time))
         self.tree = root
@@ -291,7 +350,18 @@ class AFTSurvivalTree():
 
         return self.tree  
 
-    def build_tree_dfs(self, X, y_death, y_time, depth=0):     
+    def build_tree_dfs(self, X, y_death, y_time, depth=0):
+        """
+        Build the AFTSurvivalTree using depth-first search (DFS).
+        :param X: array-like, shape (n_samples, n_features)
+        :param y_death: array-like, shape (n_samples,)
+            Binary array indicating whether the event (death) occurred.
+        :param y_time: array-like, shape (n_samples,)   
+            Array of survival times.
+        :param depth: int, optional
+            Current depth of the tree. Default is 0.  
+        :return: TreeNode
+        """     
         stack = []
         root = TreeNode(None, None, None, None, None, num_sample=len(y_time))
         self.tree = root
@@ -360,147 +430,28 @@ class AFTSurvivalTree():
 
         return self.tree
 
-    def get_best_split(self, X, y, feature):
-        best_split = None
-        best_feature = None
-        best_left_indices = None
-        best_right_indices = None
-        best_loss = np.inf
-
-        n_samples = len(X)
-
-        sorted_indices = np.argsort(X[:, feature])
-        sorted_X = X[sorted_indices, feature]
-        sorted_y = y[sorted_indices]
-
-        for i in range(n_samples - 1):
-            if sorted_X[i] != sorted_X[i+1]:
-                split = (sorted_X[i] + sorted_X[i+1]) / 2
-
-                left_y = sorted_y[:i]
-                right_y = sorted_y[i:]
-
-                pred = self.mean_y(sorted_y) if self.aggregator == "mean" else self.median_y(sorted_y)
-
-                left_loss = self.calculate_loss(left_y, pred)
-                right_loss = self.calculate_loss(right_y, pred)
-
-                total_loss = left_loss + right_loss
-
-                if total_loss < best_loss:
-                    best_loss = total_loss
-                    best_split = split
-                    best_feature = feature
-                    best_left_indices = sorted_indices[:i]
-                    best_right_indices = sorted_indices[i:]
-
-        return best_split, best_feature, best_left_indices, best_right_indices, best_loss
-
-    def get_best_feature(self, X, y):
-        best_split = None
-        best_feature = None
-        best_left_indices = None
-        best_right_indices = None
-        best_loss = np.inf
-
-        n_features = len(X[0])
-
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.get_best_split, X, y, feature) for feature in range(n_features)]
-            
-            for future in futures:
-                split, feature, left_indices, right_indices, loss = future.result()
-
-                if loss < best_loss:
-                    best_loss = loss
-                    best_split = split
-                    best_feature = feature
-                    best_left_indices = left_indices
-                    best_right_indices = right_indices
-
-        return best_split, best_feature, best_left_indices, best_right_indices, best_loss
-
-    def get_best_split_vectorized_streams(self, X, y_death, y_time):
-        best_split = None
-        best_feature = None
-        best_left_indices = None
-        best_right_indices = None
-        best_loss = cp.inf
-
-        n_samples = len(X)
-        n_features = len(X[0])
-
-        if self.aggregator == "mean":
-            pred = self.mean_y(y_time)
-        elif self.aggregator == "median":
-            pred = self.median_y(y_time)
-        else:
-            raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
-
-        n_streams = n_features
-        streams = [cp.cuda.Stream() for _ in range(n_streams)]
-
-        results = [{
-            'best_loss': cp.inf,
-            'best_split': None,
-            'best_feature': None,
-            'best_left_indices': None,
-            'best_right_indices': None
-        } for _ in range(n_streams)]
-
-        def process_feature_stream(self, feature_idx, stream_idx):
-            stream = streams[stream_idx]
-            with stream:
-                feature_values = X[:, feature_idx]
-                unique_values = cp.unique(feature_values)
-                
-                if len(unique_values) <= 1:
-                    return 
-
-                thresholds = unique_values.reshape(-1, 1)
-                left_mask = feature_values < thresholds
-                right_mask = feature_values >= thresholds
-
-                valid_splits = cp.any(left_mask, axis=1) & cp.any(right_mask, axis=1)
-                thresholds = thresholds[valid_splits]
-                left_mask = left_mask[valid_splits]
-                right_mask = right_mask[valid_splits]
-
-                if len(thresholds) == 0:
-                    return
-
-                left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in left_mask])
-                right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in right_mask])
-
-                total_loss = left_loss + right_loss
-
-                best_idx = cp.argmin(total_loss).item()
-                current_min_loss = total_loss[best_idx].item()
-
-                if current_min_loss < results[stream_idx]['best_loss']:
-                    results[stream_idx]['best_loss'] = current_min_loss
-                    results[stream_idx]['best_split'] = thresholds[best_idx].item()
-                    results[stream_idx]['best_feature'] = feature_idx
-                    results[stream_idx]['best_left_indices'] = cp.where(left_mask[best_idx])[0]
-                    results[stream_idx]['best_right_indices'] = cp.where(right_mask[best_idx])[0] 
-
-        for feature_idx in range(n_features):
-            process_feature_stream(self, feature_idx, feature_idx % n_streams)
-
-        for stream in streams:
-            stream.synchronize()
-
-        for result in results:
-            if result['best_loss'] < best_loss:
-                best_loss = result['best_loss']
-                best_split = result['best_split']
-                best_feature = result['best_feature']
-                best_left_indices = result['best_left_indices']
-                best_right_indices = result['best_right_indices']
-
-        return best_split, best_feature, best_left_indices, best_right_indices, best_loss
-
     def get_best_split_vectorized(self, X, y_death, y_time):
+        """
+        Get the best split for the AFTSurvivalTree using vectorized operations.
+        :param X: array-like, shape (n_samples, n_features)
+            Training data features.
+        :param y_death: array-like, shape (n_samples,)
+            Binary array indicating whether the event (death) occurred.
+        :param y_time: array-like, shape (n_samples,)
+            Array of survival times.
+        :return: tuple
+            (best_split, best_feature, best_left_indices, best_right_indices, best_loss)
+            - best_split: float or None
+                The value at which to split the feature.
+            - best_feature: int or None
+                The index of the feature to split on.
+            - best_left_indices: array-like
+                Indices of samples in the left child.
+            - best_right_indices: array-like
+                Indices of samples in the right child.
+            - best_loss: float
+                The loss value for the split.
+        """
         best_split = None
         best_feature = None
         best_left_indices = None
@@ -553,25 +504,17 @@ class AFTSurvivalTree():
 
         return best_split, best_feature, best_left_indices, best_right_indices, best_loss
 
-    def broadcast_loss(self, y_death, y_time, pred_mask, pred=None):
-        loss = self.calculate_loss(y_death, y_time, pred=pred)
-        loss_broadcast = cp.broadcast_to(loss, pred_mask.shape)
-        mask_loss = cp.where(pred_mask, loss_broadcast, 0)
-        return cp.sum(mask_loss, axis=1)
-            
-    def calculate_loss(self, y_death, y_time, pred=None):
-        if pred is None:
-            pred = self.mean_y(y_time)
-
-        loss = 0
-        for i in range(len(y_time)):
-            if y_death[i]:
-                loss += self.get_censored_value(y_time[i], cp.inf, pred)
-            else:
-                loss += self.get_uncensored_value(y_time[i], pred)
-        return loss
-
     def calculate_loss_vectorized(self, y_death, y_time, pred=None):
+        """
+            Calculate the loss for the given survival data.
+            :param y_death: array-like, shape (n_samples,)
+            Binary array indicating whether the event (death) occurred.
+            :param y_time: array-like, shape (n_samples,)
+                Array of survival times.
+            :param pred: array-like, shape (n_samples,), optional   
+                Predicted values. If None, the mean of y_time is used.
+            :return: float, the total loss for the given survival data
+        """
         if pred is None:
             pred = self.mean_y(y_time)
 
@@ -585,6 +528,12 @@ class AFTSurvivalTree():
         return cp.sum(loss)
     
     def get_uncensored_value(self, y, pred):
+        """
+            Calculate the loss for uncensored data.
+            :param y: float, the uncensored survival time
+            :param pred: float, the predicted value
+            :return: float, the loss for uncensored data
+        """
         if self.custom_dist is not None:
             link_function = cp.log(y) - pred
             pdf = self.custom_dist.pdf_gpu(link_function)
@@ -602,6 +551,14 @@ class AFTSurvivalTree():
         return -cp.log(pdf/(self.sigma*y))
 
     def get_censored_value(self, y_lower, y_upper, pred):
+        """
+            Calculate the loss for censored data.
+            :param y_lower: float, lower bound of the censored interval
+            :param y_upper: float, upper bound of the censored interval
+            :param pred: float, predicted value
+            :return: float, the loss for censored data
+        """
+
         if self.custom_dist is not None:
             link_function_lower = cp.log(y_lower) - pred
             link_function_upper = cp.log(y_upper) - pred
@@ -617,15 +574,28 @@ class AFTSurvivalTree():
                 raise ValueError("Distribution not supported")
 
         cdf_diff = cp.maximum(cdf_diff, self.epsilon)
-        return -np.log(cdf_diff)
+        return -cp.log(cdf_diff / self.sigma)
 
-    def mean_y(self, y_time):
-        return cp.mean(y_time)
+    def mean_y(self, y):
+        """
+            Calculate the mean of y.
+            param: y: np.ndarray, shape (n_samples,)
+            return: float, the mean of y
+        """
+        return cp.mean(y)
 
-    def median_y(self, y_time):
-        return cp.median(y_time)
+    def median_y(self, y):
+        """
+            Calculate the median of y.
+            param: y: np.ndarray, shape (n_samples,)
+        """
+        return cp.median(y)
 
     def predict(self, X):
+        """
+            Predict the survival time for the input samples X.
+            param: X: np.ndarray, shape (n_samples, n_features)
+        """
         if self.tree is None:
             raise ValueError("Tree has not been built. Call `fit` first.")
         if isinstance(X, np.ndarray) and len(X.shape) == 1:
@@ -634,6 +604,12 @@ class AFTSurvivalTree():
         return predictions
 
     def get_prediction(self, X, tree):
+        """
+            Get the prediction for a single sample X using the tree.
+            param: X: np.ndarray, shape (n_features,)
+            Param: tree: TreeNode, the current node in the tree
+            return: float, the predicted time  
+        """
         try:
             if tree.value is not None:
                 return tree.value.get()
@@ -647,12 +623,20 @@ class AFTSurvivalTree():
             raise ValueError("Error in get_prediction")
 
     def _print(self):
+        """
+            Print the tree structure.   
+        """
         if self.tree is None:
             raise ValueError("Tree has not been built. Call `fit` first.")
         else:
             self.print_tree(self.tree)
 
     def print_tree(self, tree, indent=" "):
+        """
+            Print the tree structure.
+            param: tree: TreeNode
+            param: indent: str, indentation for printing
+        """
         if tree is None:
             print(f"{indent}None")
             return
@@ -668,7 +652,10 @@ class AFTSurvivalTree():
 
     def _score(self, X, y_true):
         """
-            Implement C-Index
+            Compute the concordance index.
+            param: X: np.ndarray, shape (n_samples, n_features)
+            param: y_true: list of tuples, where each tuple is (censored, time)
+            return: float, the concordance index    
         """
         times_pred = self.predict(X)
         event_true = [1 if not censored else 0 for censored, _ in y_true]
@@ -680,6 +667,9 @@ class AFTSurvivalTree():
     def _brier(self, X, y):
         """
             Compute the Integrated Brier Score (IBS).
+            param: X: np.ndarray, shape (n_samples, n_features)
+            param: y: list of tuples, where each tuple is (censored, time)
+            return: float, the integrated brier score
         """
         pred_times = self.predict(X)
 
@@ -699,6 +689,9 @@ class AFTSurvivalTree():
     def _auc(self, X, y):
         """
             Compute the Area Under the Curve (AUC).
+            param: X: np.ndarray, shape (n_samples, n_features)
+            param: y: list of tuples, where each tuple is (censored, time)
+            return: float, the area under the curve
         """
         pred_times = self.predict(X)
 
@@ -718,6 +711,9 @@ class AFTSurvivalTree():
     def _mae(self, X, y):
         """
             Compute the Mean Absolute Error (MAE).
+            param: X: np.ndarray, shape (n_samples, n_features)
+            param: y: list of tuples, where each tuple is (censored, time)
+            return: float, the mean absolute error
         """
         pred_times = self.predict(X)
 
@@ -728,6 +724,10 @@ class AFTSurvivalTree():
         return mae
 
     def _visualize(self):
+        '''
+            Visualize the tree using graphviz.
+        '''
+
         if self.tree is None:
             raise ValueError("Tree has not been built. Call `fit` first.")
         else:
@@ -736,6 +736,14 @@ class AFTSurvivalTree():
             dot.render('doctest-output/decision_tree').replace('\\', '/')
 
     def visualize(self, dot, tree, node_id=None):
+        '''
+            Visualize the tree using graphviz.
+            param: dot: graphviz.Digraph
+            param: tree: TreeNode
+            param: node_id: str, optional
+            return: graphviz.Digraph
+        '''
+
         if node_id is None:
             node_id = str(uuid.uuid4())
 
@@ -755,6 +763,11 @@ class AFTSurvivalTree():
         return dot
 
     def save(self, path):
+        '''
+            Save the model to a JSON file.
+            param: path: str
+        '''
+
         model_state = {
             'max_depth': self.max_depth,
             'min_samples_split': self.min_samples_split,
@@ -776,6 +789,12 @@ class AFTSurvivalTree():
 
     @classmethod
     def load(cls, path):
+        '''
+            Load a model from a JSON file.
+            param: path: str
+            return: AFTSurvivalTree instance
+        '''
+
         with open(path, 'r') as f:
             model_state = json.load(f)
         

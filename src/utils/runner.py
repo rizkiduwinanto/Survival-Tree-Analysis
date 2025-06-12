@@ -3,8 +3,8 @@ from tqdm import tqdm
 import itertools
 import numpy as np
 import random
-from forest import AFTForest
-from tree import AFTSurvivalTree
+from forest.forest import AFTForest
+from tree.tree import AFTSurvivalTree
 
 SEED = 42
 random.seed(SEED)
