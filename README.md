@@ -43,8 +43,20 @@ The flag parameter can be seen in:
 | `--is_feature_subsample`  | Enable random feature selection    |
 | `--is_cv`                 | Enable cross-validation (only experiments) |
 | `--is_grid`               | Enable grid (only experiments) |
+| `--is_split_fitting`               | Enable grid (only experiments) |
 
 to disable each flag replace `--` with `--no-`. 
+
+## Structure
+The repository is structured as follows:
+* `models` contains all results of the experiments
+* `src` contains all code used to run all experiments.
+    * `dataset` contains the wrapper class for the dataset.
+    * `distribution` contains the class for distribution implementation
+    * `forest` contains the class for the random forest
+    * `tree` contains the class for the survival tree
+    * `script` contains the class for script class
+    * `utils` contains the class for utils
 
 ## Outputs
 * Models are saved in `\models`
