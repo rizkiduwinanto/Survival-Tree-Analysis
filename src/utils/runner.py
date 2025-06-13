@@ -32,6 +32,9 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
     brier_scores = []
     maes = []
 
+    best_model = None
+    best_c_index = 0
+
     if n_models > len(random_seeds):
         raise ValueError("Number of models exceeds available random seeds.")
 
@@ -43,27 +46,62 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
 
         one_model.fit(x_train, y_train)
 
-        c_indexes.append(one_model._score(x_test, y_test))
-        brier_scores.append(one_model._brier(x_test, y_test))
-        maes.append(one_model._mae(x_test, y_test))
+        c_index = one_model._score(x_test, y_test)
+        brier_score = one_model._brier(x_test, y_test)
+        mae = one_model._mae(x_test, y_test)
+
+        c_indexes.append(c_index)
+        brier_scores.append(brier_score)
+        maes.append(mae)
+
+        print(f"Model {i+1} - C-Index: {c_index}, Brier Score: {brier_score}, MAE: {mae}")
 
         # Save the model if needed
-        prefix = prefix if prefix else "model"
-        one_model.save(f"{prefix}_model_{i+1}")
+        if model == "AFTForest":
+            path_dir = os.path.join(path, f"model_{i+1}")
+            if not os.path.exists(path_dir):
+                os.makedirs(path_dir)
+            one_model.save(path_dir)
+        elif model == "AFTSurvivalTree":
+            path_dir = os.path.join(path, f"model_{i+1}.json")
+            one_model.save(path_dir)
+
+        # Check if this model is the best one
+        if c_index > best_c_index:
+            best_model = one_model
+            best_c_index = c_index
+        
+    # Save the best model if needed
+    if best_model is not None:
+        if model == "AFTForest":
+            best_path_dir = os.path.join(path, "best_model")
+            if not os.path.exists(best_path_dir):
+                os.makedirs(best_path_dir)
+            best_model.save(best_path_dir)
+        elif model == "AFTSurvivalTree":
+            best_path_dir = os.path.join(path, "best_model.json")
+            best_model.save(best_path_dir)
 
     return c_indexes, brier_scores, maes
 
-def cross_validate(model, x, y, combinations_index, n_splits=5, path=None, **model_params):
+def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, **model_params):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
-    c_indexes = []
-    brier_scores = []
-    maes = []
+    fold_c_indexes = []
+    fold_brier_scores = []
+    fold_maes = []
 
+    best_model = None
+    best_c_index = 0
+
+    c_index_test = 0
+    brier_score_test = 0
+    mae_test = 0
+    
     index = 0
 
-    for train_index, test_index in tqdm(kf.split(x, y)):
-        x_train_fold, x_test_fold = x[train_index], x[test_index]
-        y_train_fold, y_test_fold = y[train_index], y[test_index]
+    for train_index, val_index in tqdm(kf.split(x_train, y_train)):
+        x_train_fold, x_val_fold = x_train[train_index], x_train[val_index]
+        y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
 
         if model == "AFTForest":
             one_model = AFTForest(random_state=42, **model_params)
@@ -84,27 +122,55 @@ def cross_validate(model, x, y, combinations_index, n_splits=5, path=None, **mod
             one_model = AFTSurvivalTree(**params)
 
         one_model.fit(x_train_fold, y_train_fold)
+        
+        c_index = one_model._score(x_val_fold, y_val_fold)
+        brier_score = one_model._brier(x_val_fold, y_val_fold)
+        mae = one_model._mae(x_val_fold, y_val_fold)
 
-        c_indexes.append(one_model._score(x_test_fold, y_test_fold))
-        brier_scores.append(one_model._brier(x_test_fold, y_test_fold))
-        maes.append(one_model._mae(x_test_fold, y_test_fold))
+        fold_c_indexes.append(c_index)
+        fold_brier_scores.append(brier_score)
+        fold_maes.append(mae)
 
         #print all averages 
-        print(f"Fold {index+1} - C-Index: {np.mean(c_indexes)}, Brier Score: {np.mean(brier_scores)}, MAE: {np.mean(maes)}")
+        print(f"Fold {index+1} - C-Index: {c_index}, Brier Score: {brier_score}, MAE: {mae}")
+
+        # Check if this model is the best one
+        if c_index > best_c_index:
+            best_c_index = c_index
+            best_model = one_model
 
         #save the model if needed
         if model == "AFTForest":
-            path_dir = os.path.join(path, f"fold_{combinations_index+1}_{index+1}")
+            path_dir = os.path.join(path, f"comb_{combinations_index+1}_fold_{index+1}")
             if not os.path.exists(path_dir):
                 os.makedirs(path_dir)
             one_model.save(path_dir)
         elif model == "AFTSurvivalTree":
-            path_dir = os.path.join(path, f"fold_{combinations_index+1}_{index+1}.json")
+            path_dir = os.path.join(path, f"comb_{combinations_index+1}_fold_{index+1}.json")
             one_model.save(path_dir)
 
         index += 1
 
-    return c_indexes, brier_scores, maes
+    # Evaluate on the test set with the best model
+    if best_model is not None:
+        c_index_test = best_c_index
+        brier_score_test = best_model._brier(x_test, y_test)
+        mae_test = best_model._mae(x_test, y_test)
+
+        print(f"Best Model - C-Index: {c_index_test}, Brier Score: {brier_score_test}, MAE: {mae_test}")
+
+    #Save the best model if needed
+    if path is not None and best_model is not None:
+        if model == "AFTForest":
+            best_path_dir = os.path.join(path, f"best_model_combi_{combinations_index+1}")
+            if not os.path.exists(best_path_dir):
+                os.makedirs(best_path_dir)
+            best_model.save(best_path_dir)
+        elif model == "AFTSurvivalTree":
+            best_path_dir = os.path.join(path, f"best_model_combi_{combinations_index+1}.json")
+            best_model.save(best_path_dir)
+        
+    return fold_c_indexes, fold_brier_scores, fold_maes, c_index_test, brier_score_test, mae_test
 
 def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, **kwargs):
     results =[]
@@ -137,9 +203,7 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
         print("Hyperparameters:", hyperparam_dict)
 
         if is_cv:
-            x = np.concatenate([x_train, x_test], axis=0)
-            y = np.concatenate([y_train, y_test], axis=0)
-            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
+            c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
         else:
             c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
         
@@ -150,7 +214,10 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
             'mae': maes,
             'mean_c_index': np.mean(c_indexes),
             'mean_brier_score': np.mean(briers),
-            'mean_mae': np.mean(maes)
+            'mean_mae': np.mean(maes),
+            'c_index_test': c_index_test if is_cv else None,
+            'brier_score_test': brier_test if is_cv else None,
+            'mae_test': mae_test if is_cv else None,
         })
 
         combinations_index += 1
