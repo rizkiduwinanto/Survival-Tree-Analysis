@@ -12,7 +12,6 @@ module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
 
 mkdir -p $TMPDIR/results
-mkdir -p $TMPDIR/models
 cp -R /home4/$USER/Survival-Tree-Analysis $TMPDIR/Survival-Tree-Analysis
 cd $TMPDIR/Survival-Tree-Analysis
 
@@ -52,7 +51,7 @@ CMD="python3 src/main_experiment.py \
     --n_tries=10 \
     --n_models=5 \
     --n_splits=5 \
-    --path=\"$TMPDIR/models\" \
+    --path=\"$TMPDIR/results/models\" \
     --path-res=\"$TMPDIR/results/${OUTPUT_FILE}\" \
     --aggregator=\"median\" \
     
@@ -64,5 +63,5 @@ eval $CMD &
 wait
 
 mkdir -p /home4/$USER/job_${SLURM_JOBID}
-tar czvf /home4/$USER/job_${SLURM_JOBID}/models.tar.gz $TMPDIR/models
+tar czvf /home4/$USER/job_${SLURM_JOBID}/models.tar.gz $TMPDIR/results/models
 cp $TMPDIR/results/${OUTPUT_FILE} /home4/$USER/job_${SLURM_JOBID}/

@@ -57,7 +57,7 @@ def run(args):
             n_splits=n_splits,
             is_grid=is_grid,
             is_cv=is_cv,
-            prefix=path_to_save,
+            path=path_to_save,
             **fixed_params
         )
     elif type_algo.lower() == "afttree":
@@ -73,7 +73,7 @@ def run(args):
             n_splits=n_splits,
             is_grid=is_grid,
             is_cv=is_cv,
-            prefix=path_to_save,
+            path=path_to_save,
             **fixed_params
         )
     else:

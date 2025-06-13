@@ -346,27 +346,28 @@ class AFTForest():
                 The path to the saved forest directory.
             Raises: OSError if the directory cannot be created.
         """
-        if not os.path.exists(MAIN_FOLDER):
-            os.makedirs(MAIN_FOLDER)
-
-        new_path = os.path.join(MAIN_FOLDER, path)
-        os.makedirs(new_path, exist_ok=True)
+        if not os.path.exists(path):
+            try:
+                os.makedirs(path)
+            except OSError as e:
+                path = MAIN_FOLDER
+                os.makedirs(path, exist_ok=True)
 
         forest_state = {
             'n_trees': self.n_trees,
             'percent_len_sample': self.percent_len_sample_forest
         }
 
-        metadata_path = os.path.join(new_path, "_metadata.json")
+        metadata_path = os.path.join(path, "_metadata.json")
         
         with open(metadata_path, 'w') as f:
             json.dump(forest_state, f, indent=4)
         
         for i, tree in enumerate(self.trees):
-            tree_path = os.path.join(new_path, "_tree{}.json".format(i))
+            tree_path = os.path.join(path, "_tree{}.json".format(i))
             tree.save(tree_path)
 
-        return new_path
+        return path
             
     @classmethod
     def load(cls, path):

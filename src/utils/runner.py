@@ -5,7 +5,9 @@ import numpy as np
 import random
 from forest.forest import AFTForest
 from tree.tree import AFTSurvivalTree
+import os
 
+MAIN_FOLDER = "models"
 SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
@@ -25,7 +27,7 @@ param_grid = {
     'n_components': [1, 2, 5, 10],
 }
 
-def run_n_models(model, x_train, y_train, x_test, y_test, prefix=None, n_models=10, **model_params):
+def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10, **model_params):
     c_indexes = []
     brier_scores = []
     maes = []
@@ -51,7 +53,7 @@ def run_n_models(model, x_train, y_train, x_test, y_test, prefix=None, n_models=
 
     return c_indexes, brier_scores, maes
 
-def cross_validate(model, x, y, combinations_index, n_splits=5, prefix=None, **model_params):
+def cross_validate(model, x, y, combinations_index, n_splits=5, path=None, **model_params):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
     c_indexes = []
     brier_scores = []
@@ -87,15 +89,24 @@ def cross_validate(model, x, y, combinations_index, n_splits=5, prefix=None, **m
         brier_scores.append(one_model._brier(x_test_fold, y_test_fold))
         maes.append(one_model._mae(x_test_fold, y_test_fold))
 
+        #print all averages 
+        print(f"Fold {index+1} - C-Index: {np.mean(c_indexes)}, Brier Score: {np.mean(brier_scores)}, MAE: {np.mean(maes)}")
+
         #save the model if needed
-        prefix = prefix if prefix else "model"
-        one_model.save(f"{prefix}_fold_{combinations_index+1}_{index+1}")
+        if model == "AFTForest":
+            path_dir = os.path.join(path, f"fold_{combinations_index+1}_{index+1}")
+            if not os.path.exists(path_dir):
+                os.makedirs(path_dir)
+            one_model.save(path_dir)
+        elif model == "AFTSurvivalTree":
+            path_dir = os.path.join(path, f"fold_{combinations_index+1}_{index+1}.json")
+            one_model.save(path_dir)
 
         index += 1
 
     return c_indexes, brier_scores, maes
 
-def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, prefix=None, **kwargs):
+def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, **kwargs):
     results =[]
 
     if custom_param_grid is None:
@@ -128,9 +139,9 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
         if is_cv:
             x = np.concatenate([x_train, x_test], axis=0)
             y = np.concatenate([y_train, y_test], axis=0)
-            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index=combinations_index, n_splits=n_splits, prefix=prefix, **params)
+            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
         else:
-            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, prefix=prefix, **params)
+            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
         
         results.append({
             'hyperparams': hyperparam_dict,
