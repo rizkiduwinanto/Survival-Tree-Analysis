@@ -3,14 +3,12 @@ from joblib import Parallel, delayed
 import json
 import multiprocessing
 from tree.tree import AFTSurvivalTree
-from lifelines.utils import concordance_index
-from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
-from sklearn.metrics import mean_absolute_error
 from tqdm import tqdm
 import random
 import os
 import cupy as cp
 from cupy.cuda import Stream
+from utils.metrics.metrics import c_index, brier, auc, mae
 
 MAIN_FOLDER = "models/forest"
 MAX_GPU = 8  # Maximum number of GPU streams to use for parallel fitting
@@ -264,11 +262,7 @@ class AFTForest():
         """
 
         times_pred = self.predict(X)
-        event_true = [1 if not censored else 0 for censored, _ in y_true]
-        times_true = [time for _, time in y_true]
-
-        c_index = concordance_index(times_true, times_pred, event_true)
-        return c_index
+        return c_index(times_pred, y_true)
 
     def _brier(self, X, y):
         """
@@ -281,19 +275,7 @@ class AFTForest():
                 The Integrated Brier Score between the predicted times and the true times.
         """
         pred_times = self.predict(X)
-
-        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
-
-        times_true = [time for _, time in y]
-        min_time = min(times_true) 
-        max_time = max(times_true)
-        time_points = np.linspace(min_time,  max_time * 0.999, 100)
-
-        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
-                              for pred_time in pred_times])
-
-        ibs = integrated_brier_score(y_structured, y_structured, survival_probs, time_points)
-        return ibs
+        return brier(pred_times, y)
 
     def _auc(self, X, y):
         """
@@ -305,19 +287,7 @@ class AFTForest():
             Returns: tuple (auc, mean_auc)
         """
         pred_times = self.predict(X)
-
-        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
-
-        times_true = [time for _, time in y]
-        min_time = min(times_true) 
-        max_time = max(times_true)
-        time_points = np.linspace(min_time, max_time*0.998, 100)
-
-        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
-                              for pred_time in pred_times])
-
-        auc, mean_auc = cumulative_dynamic_auc(y_structured, y_structured, survival_probs, time_points)
-        return auc, mean_auc
+        return auc(pred_times, y)
 
     def _mae(self, X, y):
         """
@@ -330,12 +300,7 @@ class AFTForest():
                 The Mean Absolute Error between the predicted times and the true times.
         """
         pred_times = self.predict(X)
-
-        event_true = [1 if not censored else 0 for censored, _ in y]
-        times_true = [time for _, time in y]
-
-        mae = mean_absolute_error(times_true, pred_times)
-        return mae
+        return mae(pred_times, y)
 
     def save(self, path):
         """

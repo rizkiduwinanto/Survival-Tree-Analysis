@@ -8,13 +8,12 @@ from distribution.extreme import LogExtreme
 from distribution.GMM import GMM, GMM_New
 from utils.math.math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
 from utils.utils import stratified_gpu_train_test_split
-from lifelines.utils import concordance_index
 import graphviz
 import uuid
 import json
 from sklearn.model_selection import train_test_split
-from sksurv.metrics import integrated_brier_score, cumulative_dynamic_auc
-from sklearn.metrics import mean_absolute_error
+from utils.metrics.metrics import c_index, brier, auc, mae
+
 from collections import deque
 from sklearn.model_selection import train_test_split
 
@@ -657,12 +656,8 @@ class AFTSurvivalTree():
             param: y_true: list of tuples, where each tuple is (censored, time)
             return: float, the concordance index    
         """
-        times_pred = self.predict(X)
-        event_true = [1 if not censored else 0 for censored, _ in y_true]
-        times_true = [time for _, time in y_true]
-
-        c_index = concordance_index(times_true, times_pred, event_true)
-        return c_index
+        pred_times = self.predict(X)
+        return c_index(pred_times, y_true)
 
     def _brier(self, X, y):
         """
@@ -672,19 +667,8 @@ class AFTSurvivalTree():
             return: float, the integrated brier score
         """
         pred_times = self.predict(X)
+        return brier(pred_times, y)
 
-        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
-
-        times_true = [time for _, time in y]
-        min_time = min(times_true) 
-        max_time = max(times_true)
-        time_points = np.linspace(min_time, max_time * 0.999, 100)
-
-        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
-                              for pred_time in pred_times])
-
-        ibs = integrated_brier_score(y_structured, y_structured, survival_probs, time_points)
-        return ibs
 
     def _auc(self, X, y):
         """
@@ -694,19 +678,7 @@ class AFTSurvivalTree():
             return: float, the area under the curve
         """
         pred_times = self.predict(X)
-
-        y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
-
-        times_true = [time for _, time in y]
-        min_time = min(times_true) 
-        max_time = max(times_true)
-        time_points = np.linspace(min_time, max_time * 0.999, 100)
-
-        survival_probs = np.array([[1.0 if t < pred_time else 0.0 for t in time_points] 
-                              for pred_time in pred_times])
-
-        auc, mean_auc = cumulative_dynamic_auc(y_structured, y_structured, survival_probs, time_points)
-        return auc, mean_auc
+        return auc(pred_times, y)
 
     def _mae(self, X, y):
         """
@@ -716,12 +688,7 @@ class AFTSurvivalTree():
             return: float, the mean absolute error
         """
         pred_times = self.predict(X)
-
-        event_true = [1 if not censored else 0 for censored, _ in y]
-        times_true = [time for _, time in y]
-
-        mae = mean_absolute_error(times_true, pred_times)
-        return mae
+        return mae(pred_times, y)
 
     def _visualize(self):
         '''
