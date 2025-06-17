@@ -6,3 +6,5 @@ src/models
 models
 */__pycache__
 __pycache__
+wandb
+results

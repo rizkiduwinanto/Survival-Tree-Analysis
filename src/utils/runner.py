@@ -7,55 +7,21 @@ from forest.forest import AFTForest
 from tree.tree import AFTSurvivalTree
 from wrapper.xgboost_aft.xgboost_aft import XGBoostAFTWrapper
 from wrapper.random_survival_forest_scikit.random_survival_forest import RandomSurvivalForestWrapper
+from utils.param_grid import (
+    forest_param_grid,
+    custom_fitting_param_grid,
+    boostrap_param_grid,
+    gmm_param_grid,
+    xgboost_param_grid,
+    scikit_param_grid
+)
 import os
+import wandb
 
 MAIN_FOLDER = "models"
 SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
-
-tree_param_grid = {
-    'max_depth': [5, 10, 15],
-    'min_samples_split': [2, 5],
-    'min_samples_leaf': [1, 2],
-    'sigma': [0.01, 0.05, 0.1, 0.5, 0.75, 1.0],
-}
-
-forest_param_grid = {
-    **tree_param_grid,
-    'n_trees': [10, 20, 50, 70, 100],
-    'percent_len_sample_forest': [0.37, 0.5, 0.75],
-}
-
-custom_fitting_param_grid = {
-    'test_size': [0.1, 0.2, 0.3],
-}
-
-boostrap_param_grid = {
-    'percent_len_sample': [0.5, 0.75, 1.0],
-    'n_samples': [100, 200]
-}
-
-gmm_param_grid = {
-    'n_components': [1, 2, 5, 10],
-}
-
-xgboost_param_grid = {
-    'max_depth': [3, 6, 10],
-    'sigma': [0.01, 0.05, 0.1],
-    'learning_rate': [0.01, 0.05, 0.1],
-    'lambda_': [0.01, 0.1, 1],
-    'alpha': [0.01, 0.1, 1],
-    'num_boost_round': [100, 200, 500],
-    'early_stopping_rounds': [10, 20]
-}
-
-scikit_param_grid = {
-    'n_trees': [10, 20, 50, 100],
-    'max_depth': [5, 10, 15],
-    'min_samples_split': [2, 5],
-    'min_samples_leaf': [1, 2]
-}
 
 random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
 
@@ -120,7 +86,7 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
 
     return c_indexes, brier_scores, maes
 
-def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, **model_params):
+def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, run=None, **model_params):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
     fold_c_indexes = []
     fold_brier_scores = []
@@ -192,6 +158,14 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         fold_brier_scores.append(brier_score)
         fold_maes.append(mae)
 
+        if run is not None:
+            run.log({
+                'fold_index': index,
+                'c_index': c_index,
+                'brier_score': brier_score,
+                'mae': mae,
+            })
+
         #print all averages 
         print(f"Fold {index+1} - C-Index: {c_index}, Brier Score: {brier_score}, MAE: {mae}")
 
@@ -218,6 +192,13 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         c_index_test = best_model._score(x_test, y_test)
         brier_score_test = best_model._brier(x_test, y_test)
         mae_test = best_model._mae(x_test, y_test)
+        
+        if run is not None:
+            run.log({
+                'c_index_test': c_index_test,
+                'brier_score_test': brier_score_test,
+                'mae_test': mae_test,
+            })
 
         print(f"Best Model with test results - C-Index: {c_index_test}, Brier Score: {brier_score_test}, MAE: {mae_test}")
 
@@ -250,7 +231,7 @@ def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n
         if function == 'gmm' and is_custom_dist:
             param_grid = {**param_grid, **gmm_param_grid}
     elif model == "AFTSurvivalTree":
-        param_grid = custom_fitting_param_grid
+        param_grid = tree_param_grid
         if is_custom_dist and not is_bootstrap:
             param_grid = {**param_grid, **gmm_param_grid}
         if is_bootstrap:
@@ -274,37 +255,46 @@ def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n
 
     combinations_index = 0
 
-    for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
-        hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
+    with wandb.init(
+        project="rizkiduwinanto-university-of-groningen",
+        notes="thesis",
+        tags=[function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist"],
+    ) as run:
+        for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
+            hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
 
-        params = {
-            **hyperparam_dict,
-            'function': kwargs.get('function', 'normal'),
-            'is_bootstrap': kwargs.get('is_bootstrap', False),
-            'is_custom_dist': kwargs.get('is_custom_dist', False),
-        }
+            params = {
+                **hyperparam_dict,
+                'function': kwargs.get('function', 'normal'),
+                'is_bootstrap': kwargs.get('is_bootstrap', False),
+                'is_custom_dist': kwargs.get('is_custom_dist', False),
+            }
 
-        print("Hyperparameters:", params)
+            print("Hyperparameters:", params)
 
-        if is_cv:
-            c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
-        else:
-            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
-        
-        results.append({
-            'hyperparams': hyperparam_dict,
-            'c_index': c_indexes,
-            'brier_score': briers,
-            'mae': maes,
-            'mean_c_index': np.mean(c_indexes),
-            'mean_brier_score': np.mean(briers),
-            'mean_mae': np.mean(maes),
-            'c_index_test': c_index_test if is_cv else None,
-            'brier_score_test': brier_test if is_cv else None,
-            'mae_test': mae_test if is_cv else None,
-        })
+            run.config(params)
 
-        combinations_index += 1
+            if is_cv:
+                c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, run=run, **params)
+            else:
+                c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
+            
+            results.append({
+                'hyperparams': hyperparam_dict,
+                'c_index': c_indexes,
+                'brier_score': briers,
+                'mae': maes,
+                'mean_c_index': np.mean(c_indexes),
+                'mean_brier_score': np.mean(briers),
+                'mean_mae': np.mean(maes),
+                'c_index_test': c_index_test if is_cv else None,
+                'brier_score_test': brier_test if is_cv else None,
+                'mae_test': mae_test if is_cv else None,
+            })
+
+            combinations_index += 1
+
+    run.finish()
 
     return results
     
