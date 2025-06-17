@@ -36,48 +36,44 @@ def run(args):
     else:
         raise ValueError("Dataset not found")
 
-    X_train, X_test, y_train, y_test = data.get_train_test()
+    if type_algo.lower() == "xgboostaft":
+        X_train, X_test, y_train, y_test = data.get_train_test_xgboost()
+    else:
+        X_train, X_test, y_train, y_test = data.get_train_test()
+        
     fixed_params = {
         'function': function,
-        'is_bootstrap': is_bootstrap,
-        'is_custom_dist': is_custom_dist,
+        'is_bootstrap': False if not is_bootstrap else is_bootstrap,
+        'is_custom_dist': False if not is_custom_dist else is_custom_dist,
         'aggregator': aggregator,
     }
 
     if type_algo.lower() == "aftforest": 
-        res = tune_model(
-            model="AFTForest",
-            x_train=X_train,
-            y_train=y_train,
-            x_test=X_test,
-            y_test=y_test,
-            custom_param_grid=None,
-            n_tries=n_tries,
-            n_models=n_models,
-            n_splits=n_splits,
-            is_grid=is_grid,
-            is_cv=is_cv,
-            path=path_to_save,
-            **fixed_params
-        )
+        model = "AFTForest"
     elif type_algo.lower() == "afttree":
-        res = tune_model(
-            model="AFTSurvivalTree",
-            x_train=X_train,
-            y_train=y_train,
-            x_test=X_test,
-            y_test=y_test,
-            custom_param_grid=None,
-            n_tries=n_tries,
-            n_models=n_models,
-            n_splits=n_splits,
-            is_grid=is_grid,
-            is_cv=is_cv,
-            path=path_to_save,
-            **fixed_params
-        )
+        model = "AFTSurvivalTree"
+    elif type_algo.lower() == "xgboostaft":
+        model = "XGBoostAFT"
+    elif type_algo.lower() == "randomsurvivalforest":
+        model = "RandomSurvivalForest"
     else:
         raise ValueError("Algorithm not found")
+
+    res = tune_model(
+        model=model,
+        x_train=X_train,
+        y_train=y_train,
+        x_test=X_test,
+        y_test=y_test,
+        custom_param_grid=None,
+        n_tries=n_tries,
+        n_models=n_models,
+        n_splits=n_splits,
+        is_grid=is_grid,
+        is_cv=is_cv,
+        path=path_to_save,
+        **fixed_params
+    )
 
     print("Results: ", res)
     dump_results_to_csv(res, path_res)

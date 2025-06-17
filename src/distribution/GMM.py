@@ -35,23 +35,21 @@ class GMM_New(Distribution):
         Fit the distribution to the data
         """
 
-        print("Fitting GMM")
         self.y = y
         times, events = self.unpack_data(y)
 
         uncensored_times = np.array(times)[np.array(events) == 1]
-        print("Uncensored times: ", uncensored_times)
         gmm = self.fitter.fit(uncensored_times.reshape(-1, 1))
 
-        self.means_ = gmm.means_
-        self.covariances_ = gmm.covariances_
-        self.weights_ = gmm.weights_
+        self.means_ = cp.array(gmm.means_)
+        self.covariances_ = cp.array(gmm.covariances_)
+        self.weights_ = cp.array(gmm.weights_)
 
         times = np.array(times)
         gmm_cdf = self.fitter_cdf.fit(times.reshape(-1, 1))
-        self.means_cdf_ = gmm_cdf.means_
-        self.covariances_cdf_ = gmm_cdf.covariances_
-        self.weights_cdf_ = gmm_cdf.weights_
+        self.means_cdf_ = cp.array(gmm_cdf.means_)
+        self.covariances_cdf_ = cp.array(gmm_cdf.covariances_)
+        self.weights_cdf_ = cp.array(gmm_cdf.weights_)
 
     def fit_bootstrap(self, y, n_samples=1000, percentage=0.5):
         """
@@ -96,13 +94,88 @@ class GMM_New(Distribution):
         mean_cdf_covs = np.mean(bootstrap_cdf_covs, axis=0)
         mean_cdf_weights = np.mean(bootstrap_cdf_weights, axis=0)
 
-        self.means_ = mean_pdf_means
-        self.covariances_ = mean_pdf_covs  
-        self.weights_ = mean_pdf_weights
+        self.means_ = cp.array(mean_pdf_means)
+        self.covariances_ = cp.array(mean_pdf_covs)
+        self.weights_ = cp.array(mean_pdf_weights)
 
-        self.means_cdf_ = mean_cdf_means
-        self.covariances_cdf_ = mean_cdf_covs
-        self.weights_cdf_ = mean_cdf_weights
+        self.means_cdf_ = cp.array(mean_cdf_means)
+        self.covariances_cdf_ = cp.array(mean_cdf_covs)
+        self.weights_cdf_ = cp.array(mean_cdf_weights)
+
+    @staticmethod
+    def norm_pdf_gpu(x, mean, cov):
+        """
+        Compute the probability density function
+        """
+        cov = cov.reshape(-1)
+        std_dev = cp.sqrt(cov)
+
+        x = x.reshape(-1, 1)
+        mean = mean.reshape(1, -1)
+        std_dev = std_dev.reshape(1, -1)
+
+        pdf = (1 / (std_dev * cp.sqrt(2 * np.pi))) * cp.exp(-0.5 * ((x - mean) / std_dev) ** 2)
+        return pdf
+
+    def pdf_gpu(self, x):
+        """
+        Compute the probability density function using GPU
+        """
+        means = self.means_
+        covs = self.covariances_
+        weights = self.weights_.reshape(1, -1)
+
+        weighted_pdfs = self.norm_pdf_gpu(x, means, covs) * weights
+        pdf = cp.sum(weighted_pdfs, axis=1)
+        return pdf
+
+    @staticmethod
+    def norm_cdf_gpu(x, mean, cov):
+        """
+        Compute the cumulative density function
+        """
+        cov = cov.reshape(-1)
+        std_dev = cp.sqrt(cov)
+
+        x = x.reshape(-1, 1)
+        mean = mean.reshape(1, -1)
+        std_dev = std_dev.reshape(1, -1)
+
+        cdf = 0.5 * (1 + erf((x - mean) / (std_dev * cp.sqrt(2))))
+        return cdf
+
+    def cdf_gpu(self, x):
+        """
+        Compute the cumulative density function using GPU
+        """
+        means = self.means_cdf_
+        covs = self.covariances_cdf_
+        weights = self.weights_cdf_.reshape(1, -1)
+
+        weighted_cdfs = self.norm_cdf_gpu(x, means, covs) * weights
+        cdf = cp.sum(weighted_cdfs, axis=1)
+        return cdf
+
+    def get_params(self):
+        """
+        Get the parameters of the distribution
+        """
+        params = {
+            'means': self.means_.tolist(),
+            'covariances': self.covariances_.tolist(),
+            'weights': self.weights_.tolist(),
+            'n_components': self.n_components
+        }
+        return params
+
+    def set_params(self, params):
+        """
+        Set the parameters of the distribution
+        """
+        self.means_ = np.array(params['means'])
+        self.covariances_ = np.array(params['covariances'])
+        self.weights_ = np.array(params['weights'])
+        self.n_components = params['n_components']
 
 class GMM(Distribution):
     """

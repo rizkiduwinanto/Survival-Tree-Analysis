@@ -42,6 +42,32 @@ def stratified_gpu_train_test_split(X, y_death, y_time, test_size=0.2, random_st
     test_idx = cp.concatenate((uncensored_test_idx, censored_test_idx))
 
     return X[train_idx], y_death[train_idx], y_time[train_idx], X[test_idx], y_death[test_idx], y_time[test_idx]
+
+def stratified_train_test_split(X, y, test_size=0.2, random_state=None):
+    np.random.seed(random_state)
+
+    uncensored = np.where(y[:, 0] == 1)[0]
+    censored = np.where(y[:, 0] == 0)[0]
+
+    uncensored_count = uncensored.shape[0]
+    censored_count = censored.shape[0]
+
+    uncensored_indices = np.random.permutation(uncensored)
+    censored_indices = np.random.permutation(censored)
+
+    uncensored_test_count = int(uncensored_count * test_size)
+    censored_test_count = int(censored_count * test_size)
+
+    uncensored_test_idx = uncensored_indices[:uncensored_test_count]
+    uncensored_train_idx = uncensored_indices[uncensored_test_count:]
+    censored_test_idx = censored_indices[:censored_test_count]
+    censored_train_idx = censored_indices[censored_test_count:]
+
+    train_idx = np.concatenate((uncensored_train_idx, censored_train_idx))
+    test_idx = np.concatenate((uncensored_test_idx, censored_test_idx))
+
+    return X[train_idx], y[train_idx], X[test_idx], y[test_idx]
+
     
 def plot_survival_trees(y_true, y_pred, censored):
     """

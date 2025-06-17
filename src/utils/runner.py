@@ -5,6 +5,8 @@ import numpy as np
 import random
 from forest.forest import AFTForest
 from tree.tree import AFTSurvivalTree
+from wrapper.xgboost_aft.xgboost_aft import XGBoostAFTWrapper
+from wrapper.random_survival_forest_scikit.random_survival_forest import RandomSurvivalForestWrapper
 import os
 
 MAIN_FOLDER = "models"
@@ -12,20 +14,50 @@ SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
 
-random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
-
-param_grid = {
-    'n_trees': [10, 20, 50, 70, 100],
+tree_param_grid = {
     'max_depth': [5, 10, 15],
     'min_samples_split': [2, 5],
     'min_samples_leaf': [1, 2],
     'sigma': [0.01, 0.05, 0.1, 0.5, 0.75, 1.0],
-    'n_samples': [100, 200],
-    'percent_len_sample': [0.25, 0.5, 0.75],
+}
+
+forest_param_grid = {
+    **tree_param_grid,
+    'n_trees': [10, 20, 50, 70, 100],
     'percent_len_sample_forest': [0.37, 0.5, 0.75],
+}
+
+custom_fitting_param_grid = {
     'test_size': [0.1, 0.2, 0.3],
+}
+
+boostrap_param_grid = {
+    'percent_len_sample': [0.5, 0.75, 1.0],
+    'n_samples': [100, 200]
+}
+
+gmm_param_grid = {
     'n_components': [1, 2, 5, 10],
 }
+
+xgboost_param_grid = {
+    'max_depth': [3, 6, 10],
+    'sigma': [0.01, 0.05, 0.1],
+    'learning_rate': [0.01, 0.05, 0.1],
+    'lambda_': [0.01, 0.1, 1],
+    'alpha': [0.01, 0.1, 1],
+    'num_boost_round': [100, 200, 500],
+    'early_stopping_rounds': [10, 20]
+}
+
+scikit_param_grid = {
+    'n_trees': [10, 20, 50, 100],
+    'max_depth': [5, 10, 15],
+    'min_samples_split': [2, 5],
+    'min_samples_leaf': [1, 2]
+}
+
+random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
 
 def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10, **model_params):
     c_indexes = []
@@ -43,6 +75,10 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
             one_model = AFTForest(random_state=random_seeds[i], **model_params)
         elif model == "AFTSurvivalTree":
             raise ValueError("AFTSurvivalTree does not support multiple models in this way.")
+        elif model == "XGBoostAFT":
+            one_model = XGBoostAFTWrapper(random_state=random_seeds[i], **model_params)
+        elif model == "RandomSurvivalForest":
+            one_model = RandomSurvivalForestWrapper(random_state=random_seeds[i], **model_params)
 
         one_model.fit(x_train, y_train)
 
@@ -100,8 +136,12 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
     index = 0
 
     for train_index, val_index in tqdm(kf.split(x_train, y_train)):
-        x_train_fold, x_val_fold = x_train[train_index], x_train[val_index]
-        y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
+        if model == "XGBoostAFT":
+            x_train_fold, x_val_fold = x_train[train_index], x_train[val_index]
+            y_train_fold, y_val_fold = y_train.iloc[train_index], y_train.iloc[val_index]
+        else:
+            x_train_fold, x_val_fold = x_train[train_index], x_train[val_index]
+            y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
 
         if model == "AFTForest":
             one_model = AFTForest(random_state=42, **model_params)
@@ -120,6 +160,27 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
                 'test_size': model_params.get('test_size', 0.2),
             }
             one_model = AFTSurvivalTree(**params)
+        elif model == "XGBoostAFT":
+            params = {
+                'max_depth': model_params.get('max_depth', 6),
+                'function': model_params.get('function', 'norm'),
+                'sigma': model_params.get('sigma', 0.1),
+                'learning_rate': model_params.get('learning_rate', 0.05),
+                'lambda_': model_params.get('lambda_', 0.01),
+                'alpha': model_params.get('alpha', 0.02),
+                'num_boost_round': model_params.get('num_boost_round', 1000),
+                'early_stopping_rounds': model_params.get('early_stopping_rounds', 10),
+            }
+            one_model = XGBoostAFTWrapper(**params)
+        elif model == "RandomSurvivalForest":
+            params = {
+                'n_trees': model_params.get('n_trees', 100),
+                'max_depth': model_params.get('max_depth', None),
+                'min_samples_split': model_params.get('min_samples_split', 2),
+                'min_samples_leaf': model_params.get('min_samples_leaf', 1),
+                'bootstrap': model_params.get('bootstrap', True),
+            }
+            one_model = RandomSurvivalForestWrapper(**params)
 
         one_model.fit(x_train_fold, y_train_fold)
         
@@ -153,11 +214,12 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
 
     # Evaluate on the test set with the best model
     if best_model is not None:
-        c_index_test = best_c_index
+        print("Evaluating best model on test set... - best_c_index fold:", best_c_index)
+        c_index_test = best_model._score(x_test, y_test)
         brier_score_test = best_model._brier(x_test, y_test)
         mae_test = best_model._mae(x_test, y_test)
 
-        print(f"Best Model - C-Index: {c_index_test}, Brier Score: {brier_score_test}, MAE: {mae_test}")
+        print(f"Best Model with test results - C-Index: {c_index_test}, Brier Score: {brier_score_test}, MAE: {mae_test}")
 
     #Save the best model if needed
     if path is not None and best_model is not None:
@@ -172,13 +234,35 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         
     return fold_c_indexes, fold_brier_scores, fold_maes, c_index_test, brier_score_test, mae_test
 
-def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, **kwargs):
+def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, **kwargs):
     results =[]
 
-    if custom_param_grid is None:
-        combinations = list(itertools.product(*param_grid.values()))
-    else:
-        combinations = list(itertools.product(*custom_param_grid.values()))
+    function = kwargs.get('function', 'normal')
+    is_bootstrap = kwargs.get('is_bootstrap', False)
+    is_custom_dist = kwargs.get('is_custom_dist', False)
+
+    if model == "AFTForest":
+        param_grid = forest_param_grid
+        if is_custom_dist and not is_bootstrap:
+            param_grid = {**param_grid, **custom_fitting_param_grid}
+        if is_bootstrap:
+            param_grid = {**param_grid, **boostrap_param_grid}
+        if function == 'gmm' and is_custom_dist:
+            param_grid = {**param_grid, **gmm_param_grid}
+    elif model == "AFTSurvivalTree":
+        param_grid = custom_fitting_param_grid
+        if is_custom_dist and not is_bootstrap:
+            param_grid = {**param_grid, **gmm_param_grid}
+        if is_bootstrap:
+            param_grid = {**param_grid, **boostrap_param_grid}
+        if function == 'gmm' and is_custom_dist:
+            param_grid = {**param_grid, **gmm_param_grid}
+    elif model == "XGBoostAFT":
+        param_grid = xgboost_param_grid
+    elif model == "RandomSurvivalForest":
+        param_grid = scikit_param_grid
+
+    combinations = list(itertools.product(*param_grid.values()))
 
     if not is_grid:
         random.shuffle(combinations)
@@ -195,12 +279,12 @@ def tune_model(model, x_train, y_train, x_test, y_test, custom_param_grid=None, 
 
         params = {
             **hyperparam_dict,
-            'function': kwargs.get('function', 'norm'),
+            'function': kwargs.get('function', 'normal'),
             'is_bootstrap': kwargs.get('is_bootstrap', False),
             'is_custom_dist': kwargs.get('is_custom_dist', False),
         }
 
-        print("Hyperparameters:", hyperparam_dict)
+        print("Hyperparameters:", params)
 
         if is_cv:
             c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)

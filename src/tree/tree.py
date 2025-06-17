@@ -4,7 +4,7 @@ from .node import TreeNode
 from distribution.weibull import Weibull
 from distribution.norm import LogNormal
 from distribution.logistic import LogLogistic
-from distribution.extreme import LogExtreme
+from distribution.extreme import LogExtremeNew
 from distribution.GMM import GMM, GMM_New
 from utils.math.math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
 from utils.utils import stratified_gpu_train_test_split
@@ -32,7 +32,7 @@ class AFTSurvivalTree():
         sigma : float, optional
             Standard deviation for the loss function. Default is 0.5.
         function : str, optional
-            Distribution function to use for the loss calculation. Options are "norm", "logistic", "extreme", "weibull", "gmm", "gmm_new". Default is "norm".
+            Distribution function to use for the loss calculation. Options are "normal", "logistic", "extreme", "weibull", "gmm", "gmm_new". Default is "normal".
         is_custom_dist : bool, optional
             Whether to use a custom distribution for the loss calculation. Default is False.
         is_bootstrap : bool, optional
@@ -54,7 +54,7 @@ class AFTSurvivalTree():
         min_samples_split=5, 
         min_samples_leaf=5,
         sigma=0.5, 
-        function="norm", 
+        function="normal", 
         is_custom_dist=False,
         is_bootstrap=False,
         n_components=10,
@@ -90,13 +90,11 @@ class AFTSurvivalTree():
                 self.custom_dist = Weibull()
             elif function == "logistic":
                 self.custom_dist = LogLogistic()
-            elif function == "norm":
+            elif function == "normal":
                 self.custom_dist = LogNormal()
             elif function == "extreme":
-                self.custom_dist = LogExtreme()
+                self.custom_dist = LogExtremeNew()
             elif function == "gmm":
-                self.custom_dist = GMM(n_components=n_components)
-            elif function == "gmm_new":
                 self.custom_dist = GMM_New(n_components=n_components)
             else:
                 raise ValueError("Custom distribution not supported")
@@ -537,7 +535,7 @@ class AFTSurvivalTree():
             link_function = cp.log(y) - pred
             pdf = self.custom_dist.pdf_gpu(link_function)
         else:
-            if self.function == "norm":
+            if self.function == "normal":
                 pdf = norm_pdf(y, pred, self.sigma)
             elif self.function == "logistic":
                 pdf = logistic_pdf(y, pred, self.sigma)
@@ -563,7 +561,7 @@ class AFTSurvivalTree():
             link_function_upper = cp.log(y_upper) - pred
             cdf_diff = self.custom_dist.cdf_gpu(link_function_upper) - self.custom_dist.cdf_gpu(link_function_lower)
         else:
-            if self.function == "norm":
+            if self.function == "normal":
                 cdf_diff = norm_cdf(y_upper, pred, self.sigma) - norm_cdf(y_lower, pred, self.sigma)
             elif self.function == "logistic":
                 cdf_diff = logistic_cdf(y_upper, pred, self.sigma) - logistic_cdf(y_lower, pred, self.sigma)
@@ -649,7 +647,7 @@ class AFTSurvivalTree():
             print(f"{indent}right:", end="")
             self.print_tree(tree.right, indent + "  ")
 
-    def _score(self, X, y_true):
+    def _score(self, X, y):
         """
             Compute the concordance index.
             param: X: np.ndarray, shape (n_samples, n_features)
@@ -657,7 +655,7 @@ class AFTSurvivalTree():
             return: float, the concordance index    
         """
         pred_times = self.predict(X)
-        return c_index(pred_times, y_true)
+        return c_index(pred_times, y)
 
     def _brier(self, X, y):
         """

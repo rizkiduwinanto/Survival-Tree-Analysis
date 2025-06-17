@@ -250,7 +250,7 @@ class AFTForest():
         mean = np.mean(np_preds, axis=0)
         return mean
 
-    def _score(self, X, y_true):
+    def _score(self, X, y):
         """
             Compute the concordance index.
             param X: np.ndarray, shape (n_samples, n_features)
@@ -261,8 +261,8 @@ class AFTForest():
                 The concordance index between the predicted times and the true times.
         """
 
-        times_pred = self.predict(X)
-        return c_index(times_pred, y_true)
+        pred_times = self.predict(X)
+        return c_index(pred_times, y)
 
     def _brier(self, X, y):
         """

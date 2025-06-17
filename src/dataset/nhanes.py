@@ -57,12 +57,12 @@ class NHANESDataset(Dataset):
         return self.data
 
     def get_train_test(self, test_size=0.2, random_state=42):
-        x_train, y_train, x_test, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
-        return x_train, y_train, x_test, y_test
-
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
+        return X_train, X_test, y_train, y_test
+        
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):
-        x_train, y_train, x_test, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
-        return x_train, y_train, x_test, y_test
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
+        return X_train, X_test, y_train, y_test
     
     def convert_bool_to_int(self):
         self.data.replace({False: 0, True: 1}, inplace=True)

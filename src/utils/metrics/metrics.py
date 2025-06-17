@@ -11,7 +11,7 @@ def c_index(pred_times, y):
         param: y: list of tuples, where each tuple is (censored, time)
         return: float, the concordance index
     """
-    event_true = [1 if not censored else 0 for censored, _ in y]
+    event_true = [0 if not censored else 1 for censored, _ in y]
     times_true = [time for _, time in y]
 
     c_index = concordance_index(times_true, pred_times, event_true)
@@ -25,8 +25,9 @@ def brier(pred_times, y):
         return: float, the integrated brier score
     """
     y_structured = np.array([(bool(not censor), float(time)) for censor, time in y], dtype=[('event', bool), ('time', float)])
-
+        
     times_true = [time for _, time in y]
+
     min_time = min(times_true) 
     max_time = max(times_true)
     time_points = np.linspace(min_time, max_time * 0.999, 100)
@@ -67,7 +68,11 @@ def mae(pred_times, y):
     """
     event_mask = np.array([not censored for censored, _ in y])
     true_times = np.array([time for _, time in y])
-
     pred_times = np.array(pred_times)
-    mae = mean_absolute_error(true_times[event_mask], pred_times[event_mask])
+
+    finite_mask = event_mask & np.isfinite(true_times) & np.isfinite(pred_times)
+    if np.sum(finite_mask) == 0:
+        raise ValueError("No valid predictions to compute MAE.")
+
+    mae = mean_absolute_error(true_times[finite_mask], pred_times[finite_mask])
     return mae

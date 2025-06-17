@@ -12,11 +12,11 @@ class SupportDataset(Dataset):
     It includes features such as demographics, clinical measurements, and survival outcomes.
     The dataset is used for survival analysis tasks, particularly in the context of medical research.
     """
-    def __init__(self, data, impute_rest=True, convert_bool=True, is_scikit=False):
+    def __init__(self, data, impute_rest=True, convert_bool=True):
         self.data = data.copy()
 
         self.preprocess(impute_rest, convert_bool)
-        self.label = self.create_label(is_scikit)
+        self.label = self.create_label()
         self.xgboost_label = self.create_xgboost_label()
         
         self.data.drop(["death", "d.time"], axis=1, inplace=True)
@@ -107,12 +107,12 @@ class SupportDataset(Dataset):
         return self.xgboost_label
 
     def get_train_test(self, test_size=0.2, random_state=42):
-        x_train, y_train, x_test, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
-        return x_train, y_train, x_test, y_test
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
+        return X_train, X_test, y_train, y_test
 
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):
-        x_train, y_train, x_test, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
-        return x_train, y_train, x_test, y_test
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
+        return X_train, X_test, y_train, y_test
 
     def get_data(self):
         return self.data
