@@ -8,6 +8,7 @@ from tree.tree import AFTSurvivalTree
 from wrapper.xgboost_aft.xgboost_aft import XGBoostAFTWrapper
 from wrapper.random_survival_forest_scikit.random_survival_forest import RandomSurvivalForestWrapper
 from utils.param_grid import (
+    tree_param_grid,
     forest_param_grid,
     custom_fitting_param_grid,
     boostrap_param_grid,
@@ -86,7 +87,7 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
 
     return c_indexes, brier_scores, maes
 
-def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, run=None, **model_params):
+def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, **model_params):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
     fold_c_indexes = []
     fold_brier_scores = []
@@ -158,14 +159,6 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         fold_brier_scores.append(brier_score)
         fold_maes.append(mae)
 
-        if run is not None:
-            run.log({
-                'fold_index': index,
-                'c_index': c_index,
-                'brier_score': brier_score,
-                'mae': mae,
-            })
-
         #print all averages 
         print(f"Fold {index+1} - C-Index: {c_index}, Brier Score: {brier_score}, MAE: {mae}")
 
@@ -192,13 +185,6 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         c_index_test = best_model._score(x_test, y_test)
         brier_score_test = best_model._brier(x_test, y_test)
         mae_test = best_model._mae(x_test, y_test)
-        
-        if run is not None:
-            run.log({
-                'c_index_test': c_index_test,
-                'brier_score_test': brier_score_test,
-                'mae_test': mae_test,
-            })
 
         print(f"Best Model with test results - C-Index: {c_index_test}, Brier Score: {brier_score_test}, MAE: {mae_test}")
 
@@ -233,7 +219,7 @@ def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n
     elif model == "AFTSurvivalTree":
         param_grid = tree_param_grid
         if is_custom_dist and not is_bootstrap:
-            param_grid = {**param_grid, **gmm_param_grid}
+            param_grid = {**param_grid, ** custom_fitting_param_grid}
         if is_bootstrap:
             param_grid = {**param_grid, **boostrap_param_grid}
         if function == 'gmm' and is_custom_dist:
@@ -272,12 +258,24 @@ def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n
 
             print("Hyperparameters:", params)
 
-            run.config(params)
+            run.config.update(params, allow_val_change=True)
 
             if is_cv:
-                c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, run=run, **params)
+                c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
             else:
                 c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
+
+            run.log({
+                'c_index': c_indexes,
+                'brier_score': briers,
+                'mae': maes,
+                'mean_c_index': np.mean(c_indexes),
+                'mean_brier_score': np.mean(briers),
+                'mean_mae': np.mean(maes),
+                'c_index_test': c_index_test if is_cv else None,
+                'brier_score_test': brier_test if is_cv else None,
+                'mae_test': mae_test if is_cv else None,
+            })
             
             results.append({
                 'hyperparams': hyperparam_dict,
@@ -293,8 +291,6 @@ def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n
             })
 
             combinations_index += 1
-
-    run.finish()
 
     return results
     
