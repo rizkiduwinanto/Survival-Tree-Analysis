@@ -11,6 +11,10 @@
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
 
+export WANDB_API_KEY=<WANDB_API_KEY>
+
+wandb login
+
 mkdir -p $TMPDIR/results
 cp -R /home4/$USER/Survival-Tree-Analysis $TMPDIR/Survival-Tree-Analysis
 cd $TMPDIR/Survival-Tree-Analysis
@@ -54,7 +58,7 @@ CMD="python3 src/main_experiment.py \
     --path=\"$TMPDIR/results/models\" \
     --path-res=\"$TMPDIR/results/${OUTPUT_FILE}\" \
     --aggregator=\"median\" \
-    
+    --is_split_fitting
     $FLAGS"
 
 echo "Running configuration $SLURM_ARRAY_TASK_ID: $FUNCTION with $FLAGS"
