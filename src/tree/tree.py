@@ -458,13 +458,6 @@ class AFTSurvivalTree():
         n_samples = len(X)
         n_features = len(X[0])
 
-        if self.aggregator == "mean":
-            pred = self.mean_y(y_time)
-        elif self.aggregator == "median":
-            pred = self.median_y(y_time)
-        else:
-            raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
-
         for feature in range(n_features):
             feature_values = X[:, feature]
             unique_values = cp.unique(feature_values)
@@ -472,22 +465,41 @@ class AFTSurvivalTree():
             if len(unique_values) <= 1:
                 continue 
 
-            thresholds = unique_values.reshape(-1, 1)
-            left_mask = feature_values < thresholds
-            right_mask = feature_values >= thresholds
+            thresholds = (unique_values[:-1] + unique_values[1:]) / 2
 
-            valid_splits = cp.any(left_mask, axis=1) & cp.any(right_mask, axis=1)
+            left_mask = feature_values[:, cp.newaxis] <= thresholds
+            right_mask = ~left_mask
+
+            left_counts = cp.sum(left_mask, axis=0)
+            right_counts = cp.sum(right_mask, axis=0)
+
+            valid_splits = (left_counts >= self.min_samples_split) & (right_counts >= self.min_samples_split)
+
+            if not cp.any(valid_splits):
+                continue
+
             thresholds = thresholds[valid_splits]
-            left_mask = left_mask[valid_splits]
-            right_mask = right_mask[valid_splits]
+            left_mask = left_mask[:, valid_splits]
+            right_mask = right_mask[:, valid_splits]
+            left_counts = left_counts[valid_splits]
+            right_counts = right_counts[valid_splits]
+
+            if self.aggregator == "mean":
+                pred_left = cp.array([self.mean_y(y_time[left_mask[:, i]]) for i in range(len(thresholds))])
+                pred_right = cp.array([self.mean_y(y_time[right_mask[:, i]]) for i in range(len(thresholds))])
+            elif self.aggregator == "median":
+                pred_left = cp.array([self.median_y(y_time[left_mask[:, i]]) for i in range(len(thresholds))])
+                pred_right = cp.array([self.median_y(y_time[right_mask[:, i]]) for i in range(len(thresholds))])
+            else:
+                raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
 
             if len(thresholds) == 0:
                 continue
 
-            left_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in left_mask])
-            right_loss = cp.array([self.calculate_loss_vectorized(y_death[mask], y_time[mask], pred=pred) for mask in right_mask])
+            left_loss = cp.array([self.calculate_loss_vectorized(y_death[left_mask[:, i]], y_time[left_mask[:, i]], pred_left[i]) for i in range(len(thresholds))])
+            right_loss = cp.array([self.calculate_loss_vectorized(y_death[right_mask[:, i]], y_time[right_mask[:, i]], pred_right[i]) for i in range(len(thresholds))])
 
-            total_loss = left_loss + right_loss
+            total_loss = (left_loss * left_counts + right_loss * right_counts) / n_samples
 
             best_idx = cp.argmin(total_loss).item()
             current_min_loss = total_loss[best_idx].item()
@@ -496,8 +508,8 @@ class AFTSurvivalTree():
                 best_loss = current_min_loss
                 best_split = thresholds[best_idx].item()
                 best_feature = feature
-                best_left_indices = cp.where(left_mask[best_idx])[0]
-                best_right_indices = cp.where(right_mask[best_idx])[0]
+                best_left_indices = cp.where(left_mask[:, best_idx])[0]
+                best_right_indices = cp.where(right_mask[:, best_idx])[0]
 
         return best_split, best_feature, best_left_indices, best_right_indices, best_loss
 
@@ -545,7 +557,7 @@ class AFTSurvivalTree():
                 raise ValueError("Distribution not supported")
 
         pdf = cp.maximum(pdf, self.epsilon)
-        return -cp.log(pdf/(self.sigma*y))
+        return -cp.log(pdf)
 
     def get_censored_value(self, y_lower, y_upper, pred):
         """
@@ -571,7 +583,7 @@ class AFTSurvivalTree():
                 raise ValueError("Distribution not supported")
 
         cdf_diff = cp.maximum(cdf_diff, self.epsilon)
-        return -cp.log(cdf_diff / self.sigma)
+        return -cp.log(cdf_diff)
 
     def mean_y(self, y):
         """

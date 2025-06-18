@@ -18,9 +18,9 @@ def norm_pdf(y, pred, sigma):
         cupy.ndarray: The probability density function values.
     """
 
-    link_function = (cp.log(y) - pred)/sigma
-    norm_pdf = cp.exp(-0.5 * link_function**2) / (cp.sqrt(2 * cp.pi))
-    return norm_pdf * 1/(sigma * y)
+    z  = (cp.log(y) - pred)/sigma
+    norm_pdf = cp.exp(-0.5 * (z **2)) / (sigma * y * cp.sqrt(2 * cp.pi))
+    return norm_pdf
 
 def norm_cdf(y, pred, sigma):
     """
@@ -33,8 +33,8 @@ def norm_cdf(y, pred, sigma):
         cupy.ndarray: The cumulative distribution function values.
     """
 
-    link_function = (cp.log(y) - pred)/sigma
-    norm_cdf = 0.5 * (1 + (erf(link_function / cp.sqrt(2))))
+    z  = (cp.log(y) - pred)/sigma
+    norm_cdf = 0.5 * (1 + (erf(z / cp.sqrt(2))))
     return norm_cdf
 
 def logistic_pdf(y, pred, sigma):
@@ -47,9 +47,10 @@ def logistic_pdf(y, pred, sigma):
     Returns:
         cupy.ndarray: The probability density function values.
     """
-
-    link_function = (cp.log(y) - pred)/sigma
-    logistic_pdf = cp.exp(link_function)/(1+cp.exp(link_function))**2
+    z = (cp.log(y) - pred)/sigma
+    exp_z = cp.exp(z)
+    denom = (1 + exp_z)
+    logistic_pdf = (exp_z / (sigma * y * denom ** 2))
     return logistic_pdf
 
 def logistic_cdf(y, pred, sigma):
@@ -62,9 +63,12 @@ def logistic_cdf(y, pred, sigma):
     Returns:
         cupy.ndarray: The cumulative distribution function values.
     """
-
-    link_function = (cp.log(y) - pred)/sigma
-    logistic_cdf = cp.exp(link_function)/(1+cp.exp(link_function))
+    z = (cp.log(y) - pred)/sigma
+    logistic_cdf = cp.where(
+        z >= 0,
+        1 / (1 + cp.exp(-z)),
+        cp.exp(z) / (1 + cp.exp(z))
+    )
     return logistic_cdf
 
 def extreme_pdf(y, pred, sigma):
@@ -77,9 +81,9 @@ def extreme_pdf(y, pred, sigma):
     Returns:
         cupy.ndarray: The probability density function values.
     """
-
-    link_function = (cp.log(y) - pred)/sigma
-    extreme_pdf = cp.exp(link_function) * cp.exp(-cp.exp(link_function))
+    z = (cp.log(y) - pred)/sigma
+    exp_z = cp.exp(z)
+    extreme_pdf = exp_z * cp.exp(-exp_z) / (sigma * y)
     return extreme_pdf
 
 def extreme_cdf(y, pred, sigma):
@@ -92,9 +96,9 @@ def extreme_cdf(y, pred, sigma):
     Returns:
         cupy.ndarray: The cumulative distribution function values.
     """
-
-    link_function = (cp.log(y) - pred)/sigma
-    extreme_cdf = 1 - cp.exp(-cp.exp(link_function))
+    z = (cp.log(y) - pred)/sigma
+    exp_z = cp.exp(z)
+    extreme_cdf = 1 - cp.exp(-exp_z)
     return extreme_cdf
 
     

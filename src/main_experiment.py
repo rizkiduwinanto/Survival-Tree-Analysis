@@ -61,6 +61,7 @@ def run(args):
 
     res = tune_model(
         model=model,
+        dataset=dataset,
         x_train=X_train,
         y_train=y_train,
         x_test=X_test,

@@ -7,15 +7,8 @@ from forest.forest import AFTForest
 from tree.tree import AFTSurvivalTree
 from wrapper.xgboost_aft.xgboost_aft import XGBoostAFTWrapper
 from wrapper.random_survival_forest_scikit.random_survival_forest import RandomSurvivalForestWrapper
-from utils.param_grid import (
-    tree_param_grid,
-    forest_param_grid,
-    custom_fitting_param_grid,
-    boostrap_param_grid,
-    gmm_param_grid,
-    xgboost_param_grid,
-    scikit_param_grid
-)
+from utils.param_grid import get_parameter
+from utils.sweep_param_grid import get_sweep_param_grid
 import os
 import wandb
 
@@ -201,33 +194,14 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         
     return fold_c_indexes, fold_brier_scores, fold_maes, c_index_test, brier_score_test, mae_test
 
-def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, **kwargs):
+def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, **kwargs):
     results =[]
 
     function = kwargs.get('function', 'normal')
     is_bootstrap = kwargs.get('is_bootstrap', False)
     is_custom_dist = kwargs.get('is_custom_dist', False)
 
-    if model == "AFTForest":
-        param_grid = forest_param_grid
-        if is_custom_dist and not is_bootstrap:
-            param_grid = {**param_grid, **custom_fitting_param_grid}
-        if is_bootstrap:
-            param_grid = {**param_grid, **boostrap_param_grid}
-        if function == 'gmm' and is_custom_dist:
-            param_grid = {**param_grid, **gmm_param_grid}
-    elif model == "AFTSurvivalTree":
-        param_grid = tree_param_grid
-        if is_custom_dist and not is_bootstrap:
-            param_grid = {**param_grid, ** custom_fitting_param_grid}
-        if is_bootstrap:
-            param_grid = {**param_grid, **boostrap_param_grid}
-        if function == 'gmm' and is_custom_dist:
-            param_grid = {**param_grid, **gmm_param_grid}
-    elif model == "XGBoostAFT":
-        param_grid = xgboost_param_grid
-    elif model == "RandomSurvivalForest":
-        param_grid = scikit_param_grid
+    param_grid = get_parameter(model, function, is_custom_dist, is_bootstrap)
 
     combinations = list(itertools.product(*param_grid.values()))
 
@@ -238,13 +212,13 @@ def tune_model(model, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n
             combinations = [combinations[i] for i in combination_indices]
         else:
             raise ValueError("Not enough combinations to sample from.")
-
+            
     combinations_index = 0
 
     with wandb.init(
         project="rizkiduwinanto-university-of-groningen",
         notes="thesis",
-        tags=[function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist"],
+        tags=[model, function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist", dataset]
     ) as run:
         for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
             hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
