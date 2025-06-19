@@ -157,6 +157,8 @@ def run(args):
         print("Score: ", score)
 
         aft_tree.save(path_to_save)
+        aft_tree._visualize(f'decision_tree/{path_to_save}.png')
+
     elif type_algo.lower() == "xgboostaft":
         xgboost_aft = XGBoostAFTWrapper(
             max_depth=max_depth,

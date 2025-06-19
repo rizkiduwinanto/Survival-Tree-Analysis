@@ -485,11 +485,11 @@ class AFTSurvivalTree():
             right_counts = right_counts[valid_splits]
 
             if self.aggregator == "mean":
-                pred_left = cp.array([self.mean_y(y_time[left_mask[:, i]]) for i in range(len(thresholds))])
-                pred_right = cp.array([self.mean_y(y_time[right_mask[:, i]]) for i in range(len(thresholds))])
+                pred_left = cp.array([self.mean_y(cp.log(y_time[left_mask[:, i]])) for i in range(len(thresholds))])
+                pred_right = cp.array([self.mean_y(cp.log(y_time[right_mask[:, i]])) for i in range(len(thresholds))])
             elif self.aggregator == "median":
-                pred_left = cp.array([self.median_y(y_time[left_mask[:, i]]) for i in range(len(thresholds))])
-                pred_right = cp.array([self.median_y(y_time[right_mask[:, i]]) for i in range(len(thresholds))])
+                pred_left = cp.array([self.median_y(cp.log(y_time[left_mask[:, i]])) for i in range(len(thresholds))])
+                pred_right = cp.array([self.median_y(cp.log(y_time[right_mask[:, i]])) for i in range(len(thresholds))])
             else:
                 raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
 
@@ -524,9 +524,6 @@ class AFTSurvivalTree():
                 Predicted values. If None, the mean of y_time is used.
             :return: float, the total loss for the given survival data
         """
-        if pred is None:
-            pred = self.mean_y(y_time)
-
         is_censored = y_death.astype(bool)
 
         uncensored_loss = self.get_uncensored_value(y_time, pred)
@@ -700,7 +697,7 @@ class AFTSurvivalTree():
         pred_times = self.predict(X)
         return mae(pred_times, y)
 
-    def _visualize(self):
+    def _visualize(self, path='doctest-output/decision_tree'):
         '''
             Visualize the tree using graphviz.
         '''
@@ -710,7 +707,7 @@ class AFTSurvivalTree():
         else:
             dot = graphviz.Digraph(comment='AFT Survival Tree')
             dot = self.visualize(dot, self.tree)
-            dot.render('doctest-output/decision_tree').replace('\\', '/')
+            dot.render(path).replace('\\', '/')
 
     def visualize(self, dot, tree, node_id=None):
         '''
