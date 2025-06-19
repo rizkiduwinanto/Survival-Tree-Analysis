@@ -7,6 +7,7 @@ It includes implementations of the normal, logistic, and extreme value distribut
 as well as their probability density functions (PDF) and cumulative distribution functions (CDF).
 """
 
+@cp.fuse(kernel_name='norm_pdf')
 def norm_pdf(y, pred, sigma):
     """
     Normal probability density function for survival analysis.
@@ -22,6 +23,7 @@ def norm_pdf(y, pred, sigma):
     norm_pdf = cp.exp(-0.5 * (z **2)) / (sigma * y * cp.sqrt(2 * cp.pi))
     return norm_pdf
 
+@cp.fuse(kernel_name='norm_cdf')
 def norm_cdf(y, pred, sigma):
     """
     Normal cumulative distribution function for survival analysis.
@@ -37,6 +39,7 @@ def norm_cdf(y, pred, sigma):
     norm_cdf = 0.5 * (1 + (erf(z / cp.sqrt(2))))
     return norm_cdf
 
+@cp.fuse(kernel_name='logistic_pdf')
 def logistic_pdf(y, pred, sigma):
     """
     Logistic probability density function for survival analysis.
@@ -53,6 +56,7 @@ def logistic_pdf(y, pred, sigma):
     logistic_pdf = (exp_z / (sigma * y * denom ** 2))
     return logistic_pdf
 
+@cp.fuse(kernel_name='logistic_cdf')
 def logistic_cdf(y, pred, sigma):
     """
     Logistic cumulative distribution function for survival analysis.
@@ -71,6 +75,7 @@ def logistic_cdf(y, pred, sigma):
     )
     return logistic_cdf
 
+@cp.fuse(kernel_name='extreme_pdf')
 def extreme_pdf(y, pred, sigma):
     """
     Extreme value probability density function for survival analysis.
@@ -86,6 +91,7 @@ def extreme_pdf(y, pred, sigma):
     extreme_pdf = exp_z * cp.exp(-exp_z) / (sigma * y)
     return extreme_pdf
 
+@cp.fuse(kernel_name='extreme_cdf')
 def extreme_cdf(y, pred, sigma):
     """
     Extreme value cumulative distribution function for survival analysis.

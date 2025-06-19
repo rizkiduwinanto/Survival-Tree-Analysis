@@ -5,7 +5,7 @@ from distribution.weibull import Weibull
 from distribution.norm import LogNormal
 from distribution.logistic import LogLogistic
 from distribution.extreme import LogExtremeNew
-from distribution.GMM import GMM, GMM_New
+from distribution.GMM import GMM_New
 from utils.math.math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
 from utils.utils import stratified_gpu_train_test_split
 import graphviz

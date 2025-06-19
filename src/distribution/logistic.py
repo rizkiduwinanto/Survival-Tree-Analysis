@@ -77,9 +77,10 @@ class LogLogistic(Distribution):
         """
         Compute the probability density function using GPU
         """
-        x = cp.maximum(x, self.epsilon)
-        z = x / self.beta_
-        pdf = (self.alpha_ / self.beta_) * z ** (self.alpha_ - 1) / (1 + z ** self.alpha_) ** 2
+        z = x * self.alpha_
+        exp_z = cp.exp(z)
+        denom = (1 + exp_z)
+        pdf = (exp_z * self.alpha_) / (denom ** 2)
         return pdf
 
     def cdf(self, x):
@@ -92,9 +93,12 @@ class LogLogistic(Distribution):
         """
         Compute the cumulative density function
         """
-        x = cp.maximum(x, self.epsilon)
-        z = x / self.beta_
-        cdf = 1 / (1 + z ** self.alpha_)
+        z = x * self.alpha_
+        cdf = cp.where(
+            z >= 0,
+            1 / (1 + cp.exp(-z)),
+            cp.exp(z) / (1 + cp.exp(z))
+        )
         return cdf
 
     def get_params(self):

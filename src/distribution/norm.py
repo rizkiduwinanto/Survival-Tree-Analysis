@@ -76,7 +76,8 @@ class LogNormal(Distribution):
         """
         Compute the probability density function using GPU
         """
-        pdf = (1 / (x * self.sigma_ * cp.sqrt(2 * np.pi))) * cp.exp(-0.5 * ((cp.log(x) - self.mu_) / self.sigma_) ** 2)
+        z = x / self.sigma_
+        pdf = cp.exp(-0.5 * (z ** 2)) / (x * self.sigma_ * cp.sqrt(2 * np.pi))
         return pdf
 
     def cdf(self, x):
@@ -89,7 +90,8 @@ class LogNormal(Distribution):
         """
         Compute the cumulative density function
         """
-        cdf = 0.5 * (1 + erf((cp.log(x) - self.mu_) / (self.sigma_ * cp.sqrt(2))))
+        z = x / self.sigma_
+        cdf = 0.5 * (1 + erf(z / cp.sqrt(2)))
         return cdf
 
     def get_params(self):

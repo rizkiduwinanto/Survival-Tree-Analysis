@@ -1,14 +1,8 @@
 import numpy as np
 import cupy as cp
-from cupyx.scipy.special import erf
 from scipy.stats import weibull_min
-from lifelines import WeibullFitter, LogNormalFitter, LogLogisticFitter, ExponentialFitter
-from sklearn.mixture import GaussianMixture
-from abc import abstractmethod
-from scipy.stats import norm, lognorm, fisk, gumbel_r
-import warnings
+from lifelines import WeibullFitter
 from .distribution import Distribution
-from lifelines.exceptions import ApproximationWarning
 
 class Weibull(Distribution):
     """
@@ -76,7 +70,22 @@ class Weibull(Distribution):
         """
         Compute the probability density function using GPU
         """
-        pdf = (self.rho_ / self.lambda_) * (x / self.lambda_) ** (self.rho_ - 1) * cp.exp(- (x / self.lambda_) ** self.rho_)
+
+        x = cp.clip(x, -100, 100)
+        exp = cp.exp(x)
+        exp = cp.clip(exp, 1e-100, 1e-100)
+
+        z = exp / self.lambda_
+        z = cp.clip(z, 1e-100, 1e100)
+
+        log_p1 = cp.log(self.rho_ / self.lambda_)
+        log_p2 = (self.rho_ - 1) * cp.log(z)
+        log_p3 = - (z ** self.rho_)
+
+        log_pdf = log_p1 + log_p2 + log_p3
+        log_pdf = cp.clip(log_pdf, -100, 100)
+
+        pdf = cp.exp(log_pdf)
         return pdf
 
     def cdf(self, x):
@@ -89,7 +98,17 @@ class Weibull(Distribution):
         """
         Compute the cumulative density function
         """
-        cdf = 1 - cp.exp(- (x / self.lambda_) ** self.rho_)
+        x = cp.clip(x, -100, 100)
+        exp = cp.exp(x)
+        exp = cp.clip(exp, 1e-100, 1e100)
+
+        z = exp / self.lambda_
+        z = cp.clip(z, 1e-100, 1e100)
+
+        exp = -(z ** self.rho_)
+        exp = cp.clip(exp, -100, 0)
+
+        cdf = 1 - cp.exp(exp)
         return cdf
 
     def get_params(self):
