@@ -1,0 +1,260 @@
+wandb: Currently logged in as: rizkiduwinanto (rizkiduwinanto-university-of-groningen) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+Command: python3 src/main_experiment.py     --parameter="randomsurvivalforest"     --dataset="support"     --no-is_grid     --is_cv     --n_tries=10     --n_models=5     --n_splits=5     --path="results/models"     --path-res="results/results_rsf_support.csv"     
+/tmp/Survival-Tree-Analysis/src/dataset/support.py:101: FutureWarning: Downcasting behavior in `replace` is deprecated and will be removed in a future version. To retain the old behavior, explicitly call `result.infer_objects(copy=False)`. To opt-in to the future behavior, set `pd.set_option('future.no_silent_downcasting', True)`
+  self.data.replace({False: 0, True: 1}, inplace=True)
+wandb: Currently logged in as: rizkiduwinanto (rizkiduwinanto-university-of-groningen) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.20.1
+wandb: Run data is saved locally in /tmp/Survival-Tree-Analysis/wandb/run-20250617_203159-x0qrmic7
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run polar-smoke-18
+wandb: ⭐️ View project at https://wandb.ai/rizkiduwinanto-university-of-groningen/rizkiduwinanto-university-of-groningen
+wandb: 🚀 View run at https://wandb.ai/rizkiduwinanto-university-of-groningen/rizkiduwinanto-university-of-groningen/runs/x0qrmic7
+Tuning Hyperparameters:   0%|          | 0/10 [00:00<?, ?it/s]Hyperparameters: {'n_trees': 100, 'max_depth': 15, 'min_samples_split': 2, 'min_samples_leaf': 1, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:32, 32.74s/it][A
+2it [01:05, 33.04s/it][A
+3it [01:40, 33.78s/it][A
+4it [02:15, 34.23s/it][A
+5it [02:50, 34.34s/it][A5it [02:50, 34.02s/it]
+Tuning Hyperparameters:  10%|█         | 1/10 [02:59<26:51, 179.01s/it]Fold 1 - C-Index: 0.6909367921267096, Brier Score: 0.4013996144650204, MAE: 735.045643153527
+Fold 2 - C-Index: 0.6703413275104232, Brier Score: 0.3836899215143786, MAE: 706.4212765957446
+Fold 3 - C-Index: 0.6706760990225294, Brier Score: 0.39323136831907357, MAE: 737.1526548672566
+Fold 4 - C-Index: 0.6723207946584963, Brier Score: 0.40846003142167747, MAE: 764.4868995633187
+Fold 5 - C-Index: 0.6861722874128737, Brier Score: 0.38891255253672036, MAE: 719.9330357142857
+Evaluating best model on test set... - best_c_index fold: 0.6909367921267096
+Best Model with test results - C-Index: 0.6770223063589728, Brier Score: 0.3962773017404976, MAE: 715.2205387205387
+Hyperparameters: {'n_trees': 10, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 1, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:02,  2.38s/it][A
+2it [00:04,  2.33s/it][A
+3it [00:06,  2.33s/it][A
+4it [00:09,  2.36s/it][A
+5it [00:12,  2.49s/it][A5it [00:12,  2.42s/it]
+Tuning Hyperparameters:  20%|██        | 2/10 [03:12<10:51, 81.41s/it] Fold 1 - C-Index: 0.6888775745741578, Brier Score: 0.3844598075667461, MAE: 683.0560165975104
+Fold 2 - C-Index: 0.666714151803094, Brier Score: 0.352083484513534, MAE: 634.5106382978723
+Fold 3 - C-Index: 0.6644761676358204, Brier Score: 0.388694466272853, MAE: 715.962389380531
+Fold 4 - C-Index: 0.660926282507793, Brier Score: 0.4015974506166467, MAE: 731.5414847161572
+Fold 5 - C-Index: 0.6777059791186959, Brier Score: 0.3829800425327049, MAE: 701.7566964285714
+Evaluating best model on test set... - best_c_index fold: 0.6888775745741578
+Best Model with test results - C-Index: 0.6675225915115609, Brier Score: 0.39095420197004493, MAE: 696.2811447811448
+Hyperparameters: {'n_trees': 100, 'max_depth': 15, 'min_samples_split': 5, 'min_samples_leaf': 2, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:30, 30.95s/it][A
+2it [01:02, 31.11s/it][A
+3it [01:33, 31.17s/it][A
+4it [02:04, 31.29s/it][A
+5it [02:36, 31.36s/it][A5it [02:36, 31.27s/it]
+Tuning Hyperparameters:  30%|███       | 3/10 [05:57<13:57, 119.64s/it]Fold 1 - C-Index: 0.6945234421679601, Brier Score: 0.401154148040389, MAE: 735.7489626556016
+Fold 2 - C-Index: 0.6758699023256117, Brier Score: 0.3756529813967721, MAE: 693.6446808510639
+Fold 3 - C-Index: 0.6717155150997635, Brier Score: 0.39130272182593584, MAE: 734.5818584070796
+Fold 4 - C-Index: 0.6694835828782233, Brier Score: 0.4082928509387871, MAE: 768.1135371179039
+Fold 5 - C-Index: 0.6914028209208447, Brier Score: 0.39280185935742784, MAE: 727.9129464285714
+Evaluating best model on test set... - best_c_index fold: 0.6945234421679601
+Best Model with test results - C-Index: 0.6815507676700021, Brier Score: 0.3996044016573212, MAE: 724.8232323232323
+Hyperparameters: {'n_trees': 20, 'max_depth': 5, 'min_samples_split': 5, 'min_samples_leaf': 2, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:02,  2.92s/it][A
+2it [00:05,  2.90s/it][A
+3it [00:08,  2.89s/it][A
+4it [00:11,  2.83s/it][A
+5it [00:14,  2.80s/it][A5it [00:14,  2.84s/it]
+Tuning Hyperparameters:  40%|████      | 4/10 [06:13<07:51, 78.65s/it] Fold 1 - C-Index: 0.6749528682708206, Brier Score: 0.37349103508803405, MAE: 631.3485477178423
+Fold 2 - C-Index: 0.6693365275243425, Brier Score: 0.34533334929513604, MAE: 599.8063829787234
+Fold 3 - C-Index: 0.654066950655429, Brier Score: 0.37146121003921156, MAE: 658.1880530973451
+Fold 4 - C-Index: 0.6556106556084811, Brier Score: 0.3542658801889691, MAE: 604.6572052401747
+Fold 5 - C-Index: 0.6649906682038791, Brier Score: 0.35653383672884637, MAE: 623.71875
+Evaluating best model on test set... - best_c_index fold: 0.6749528682708206
+Best Model with test results - C-Index: 0.6619263843912938, Brier Score: 0.37363216749393574, MAE: 635.7289562289562
+Hyperparameters: {'n_trees': 20, 'max_depth': 15, 'min_samples_split': 2, 'min_samples_leaf': 1, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:06,  6.81s/it][A
+2it [00:13,  6.80s/it][A
+3it [00:20,  6.81s/it][A
+4it [00:27,  6.95s/it][A
+5it [00:34,  7.02s/it][A5it [00:34,  6.95s/it]
+Tuning Hyperparameters:  50%|█████     | 5/10 [06:49<05:17, 63.49s/it]Fold 1 - C-Index: 0.6831853207442561, Brier Score: 0.41276092402962206, MAE: 764.8526970954357
+Fold 2 - C-Index: 0.6708094729584835, Brier Score: 0.38191795026744835, MAE: 704.9872340425532
+Fold 3 - C-Index: 0.6597377638734891, Brier Score: 0.3970893502851605, MAE: 745.1261061946902
+Fold 4 - C-Index: 0.6630208939255725, Brier Score: 0.4086730163595624, MAE: 765.056768558952
+Fold 5 - C-Index: 0.6809578709966487, Brier Score: 0.40240430210508266, MAE: 751.3325892857143
+Evaluating best model on test set... - best_c_index fold: 0.6831853207442561
+Best Model with test results - C-Index: 0.6709395182252439, Brier Score: 0.3998098357967334, MAE: 730.8181818181819
+Hyperparameters: {'n_trees': 100, 'max_depth': 5, 'min_samples_split': 2, 'min_samples_leaf': 2, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:13, 13.30s/it][A
+2it [00:26, 13.47s/it][A
+3it [00:40, 13.62s/it][A
+4it [00:54, 13.56s/it][A
+5it [01:07, 13.57s/it][A5it [01:07, 13.55s/it]
+Tuning Hyperparameters:  60%|██████    | 6/10 [08:04<04:29, 67.43s/it]Fold 1 - C-Index: 0.6775146033811148, Brier Score: 0.37272037690715804, MAE: 626.5954356846473
+Fold 2 - C-Index: 0.6701803855213107, Brier Score: 0.3467929215322806, MAE: 605.1510638297873
+Fold 3 - C-Index: 0.6587236207169122, Brier Score: 0.3687597729385761, MAE: 646.1946902654868
+Fold 4 - C-Index: 0.6531914963016763, Brier Score: 0.35789826341939346, MAE: 611.3580786026201
+Fold 5 - C-Index: 0.6689490259366985, Brier Score: 0.36484122001482416, MAE: 640.8660714285714
+Evaluating best model on test set... - best_c_index fold: 0.6775146033811148
+Best Model with test results - C-Index: 0.6640765890425739, Brier Score: 0.3742875702211002, MAE: 635.7558922558923
+Hyperparameters: {'n_trees': 100, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 2, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:21, 21.24s/it][A
+2it [00:42, 21.32s/it][A
+3it [01:03, 21.28s/it][A
+4it [01:24, 21.19s/it][A
+5it [01:45, 21.06s/it][A5it [01:45, 21.15s/it]
+Tuning Hyperparameters:  70%|███████   | 7/10 [09:58<04:07, 82.66s/it]Fold 1 - C-Index: 0.6913989978364135, Brier Score: 0.3889433259324809, MAE: 697.7323651452282
+Fold 2 - C-Index: 0.6771443888880431, Brier Score: 0.3638781836113889, MAE: 655.3638297872341
+Fold 3 - C-Index: 0.6716482998852502, Brier Score: 0.37971719818234523, MAE: 696.70796460177
+Fold 4 - C-Index: 0.6647442051621054, Brier Score: 0.3875348776924566, MAE: 708.4192139737992
+Fold 5 - C-Index: 0.6853277518053829, Brier Score: 0.37772651377270466, MAE: 689.984375
+Evaluating best model on test set... - best_c_index fold: 0.6913989978364135
+Best Model with test results - C-Index: 0.6765959787179484, Brier Score: 0.3851565938672346, MAE: 687.2323232323232
+Hyperparameters: {'n_trees': 50, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 2, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:10, 10.69s/it][A
+2it [00:21, 10.67s/it][A
+3it [00:31, 10.51s/it][A
+4it [00:42, 10.68s/it][A
+5it [00:53, 10.59s/it][A5it [00:53, 10.61s/it]
+Tuning Hyperparameters:  80%|████████  | 8/10 [10:57<02:29, 74.92s/it]Fold 1 - C-Index: 0.6911438735378672, Brier Score: 0.38597415164313253, MAE: 687.649377593361
+Fold 2 - C-Index: 0.6727059785599172, Brier Score: 0.36856898901790325, MAE: 665.1893617021277
+Fold 3 - C-Index: 0.6684117528760046, Brier Score: 0.3807329281864954, MAE: 699.1393805309734
+Fold 4 - C-Index: 0.6673704879960771, Brier Score: 0.39117984221662366, MAE: 712.8231441048035
+Fold 5 - C-Index: 0.6823562973238106, Brier Score: 0.3753760542137567, MAE: 687.2098214285714
+Evaluating best model on test set... - best_c_index fold: 0.6911438735378672
+Best Model with test results - C-Index: 0.6760256735416231, Brier Score: 0.38737335811010476, MAE: 690.1212121212121
+Hyperparameters: {'n_trees': 20, 'max_depth': 15, 'min_samples_split': 2, 'min_samples_leaf': 2, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:05,  5.99s/it][A
+2it [00:11,  5.98s/it][A
+3it [00:18,  6.06s/it][A
+4it [00:25,  6.46s/it][A
+5it [00:31,  6.39s/it][A5it [00:31,  6.29s/it]
+Tuning Hyperparameters:  90%|█████████ | 9/10 [11:30<01:01, 61.99s/it]Fold 1 - C-Index: 0.6841947735965126, Brier Score: 0.4177515639073042, MAE: 776.2427385892116
+Fold 2 - C-Index: 0.6735987716211426, Brier Score: 0.37835935551580924, MAE: 704.5340425531915
+Fold 3 - C-Index: 0.6673599691993001, Brier Score: 0.3964597074104621, MAE: 746.608407079646
+Fold 4 - C-Index: 0.6669100322808269, Brier Score: 0.41520456915040294, MAE: 778.2816593886463
+Fold 5 - C-Index: 0.6792419379620904, Brier Score: 0.39187343754889853, MAE: 728.484375
+Evaluating best model on test set... - best_c_index fold: 0.6841947735965126
+Best Model with test results - C-Index: 0.6699712605425886, Brier Score: 0.41683933678497637, MAE: 769.4629629629629
+Hyperparameters: {'n_trees': 20, 'max_depth': 15, 'min_samples_split': 5, 'min_samples_leaf': 1, 'function': 'lognormal', 'is_bootstrap': False, 'is_custom_dist': False}
+
+0it [00:00, ?it/s][A
+1it [00:07,  7.57s/it][A
+2it [00:13,  6.81s/it][A
+3it [00:20,  6.53s/it][A
+4it [00:26,  6.46s/it][A
+5it [00:33,  6.52s/it][A5it [00:33,  6.61s/it]
+Tuning Hyperparameters: 100%|██████████| 10/10 [12:06<00:00, 53.77s/it]Tuning Hyperparameters: 100%|██████████| 10/10 [12:06<00:00, 72.60s/it]
+wandb: uploading console lines 83-83
+wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb: brier_score_test ▅▄▅▁▅▁▃▃█▄
+wandb:     c_index_test ▆▃█▁▄▂▆▆▄▆
+wandb:         mae_test ▅▄▆▁▆▁▄▄█▅
+wandb: mean_brier_score ▇▅▇▁█▁▄▄█▇
+wandb:     mean_c_index ▇▄█▁▄▂▇▆▅▅
+wandb:         mean_mae ▇▅▇▁█▁▅▅█▇
+wandb: 
+wandb: Run summary:
+wandb: brier_score_test 0.39441
+wandb:     c_index_test 0.67472
+wandb:         mae_test 717.97643
+wandb: mean_brier_score 0.39613
+wandb:     mean_c_index 0.67453
+wandb:         mean_mae 733.66365
+wandb: 
+wandb: 🚀 View run polar-smoke-18 at: https://wandb.ai/rizkiduwinanto-university-of-groningen/rizkiduwinanto-university-of-groningen/runs/x0qrmic7
+wandb: ⭐️ View project at: https://wandb.ai/rizkiduwinanto-university-of-groningen/rizkiduwinanto-university-of-groningen
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20250617_203159-x0qrmic7/logs
+Fold 1 - C-Index: 0.6903116823735617, Brier Score: 0.40293047392422804, MAE: 738.2946058091286
+Fold 2 - C-Index: 0.6617700791443106, Brier Score: 0.3853359275398376, MAE: 708.6042553191489
+Fold 3 - C-Index: 0.6725350029951099, Brier Score: 0.3981961970702808, MAE: 746.8650442477876
+Fold 4 - C-Index: 0.6620988952324622, Brier Score: 0.40931638752708177, MAE: 766.6659388646289
+Fold 5 - C-Index: 0.6859251586727683, Brier Score: 0.384891208390807, MAE: 707.8883928571429
+Evaluating best model on test set... - best_c_index fold: 0.6903116823735617
+Best Model with test results - C-Index: 0.6747232198281238, Brier Score: 0.394410265792323, MAE: 717.976430976431
+Results:  [{'hyperparams': {'n_trees': 100, 'max_depth': 15, 'min_samples_split': 2, 'min_samples_leaf': 1}, 'c_index': [np.float64(0.6909367921267096), np.float64(0.6703413275104232), np.float64(0.6706760990225294), np.float64(0.6723207946584963), np.float64(0.6861722874128737)], 'brier_score': [np.float64(0.4013996144650204), np.float64(0.3836899215143786), np.float64(0.39323136831907357), np.float64(0.40846003142167747), np.float64(0.38891255253672036)], 'mae': [735.045643153527, 706.4212765957446, 737.1526548672566, 764.4868995633187, 719.9330357142857], 'mean_c_index': np.float64(0.6780894601462064), 'mean_brier_score': np.float64(0.3951386976513741), 'mean_mae': np.float64(732.6079019788266), 'c_index_test': np.float64(0.6770223063589728), 'brier_score_test': np.float64(0.3962773017404976), 'mae_test': 715.2205387205387}, {'hyperparams': {'n_trees': 10, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 1}, 'c_index': [np.float64(0.6888775745741578), np.float64(0.666714151803094), np.float64(0.6644761676358204), np.float64(0.660926282507793), np.float64(0.6777059791186959)], 'brier_score': [np.float64(0.3844598075667461), np.float64(0.352083484513534), np.float64(0.388694466272853), np.float64(0.4015974506166467), np.float64(0.3829800425327049)], 'mae': [683.0560165975104, 634.5106382978723, 715.962389380531, 731.5414847161572, 701.7566964285714], 'mean_c_index': np.float64(0.6717400311279123), 'mean_brier_score': np.float64(0.38196305030049693), 'mean_mae': np.float64(693.3654450841285), 'c_index_test': np.float64(0.6675225915115609), 'brier_score_test': np.float64(0.39095420197004493), 'mae_test': 696.2811447811448}, {'hyperparams': {'n_trees': 100, 'max_depth': 15, 'min_samples_split': 5, 'min_samples_leaf': 2}, 'c_index': [np.float64(0.6945234421679601), np.float64(0.6758699023256117), np.float64(0.6717155150997635), np.float64(0.6694835828782233), np.float64(0.6914028209208447)], 'brier_score': [np.float64(0.401154148040389), np.float64(0.3756529813967721), np.float64(0.39130272182593584), np.float64(0.4082928509387871), np.float64(0.39280185935742784)], 'mae': [735.7489626556016, 693.6446808510639, 734.5818584070796, 768.1135371179039, 727.9129464285714], 'mean_c_index': np.float64(0.6805990526784806), 'mean_brier_score': np.float64(0.39384091231186236), 'mean_mae': np.float64(732.0003970920441), 'c_index_test': np.float64(0.6815507676700021), 'brier_score_test': np.float64(0.3996044016573212), 'mae_test': 724.8232323232323}, {'hyperparams': {'n_trees': 20, 'max_depth': 5, 'min_samples_split': 5, 'min_samples_leaf': 2}, 'c_index': [np.float64(0.6749528682708206), np.float64(0.6693365275243425), np.float64(0.654066950655429), np.float64(0.6556106556084811), np.float64(0.6649906682038791)], 'brier_score': [np.float64(0.37349103508803405), np.float64(0.34533334929513604), np.float64(0.37146121003921156), np.float64(0.3542658801889691), np.float64(0.35653383672884637)], 'mae': [631.3485477178423, 599.8063829787234, 658.1880530973451, 604.6572052401747, 623.71875], 'mean_c_index': np.float64(0.6637915340525904), 'mean_brier_score': np.float64(0.36021706226803946), 'mean_mae': np.float64(623.5437878068171), 'c_index_test': np.float64(0.6619263843912938), 'brier_score_test': np.float64(0.37363216749393574), 'mae_test': 635.7289562289562}, {'hyperparams': {'n_trees': 20, 'max_depth': 15, 'min_samples_split': 2, 'min_samples_leaf': 1}, 'c_index': [np.float64(0.6831853207442561), np.float64(0.6708094729584835), np.float64(0.6597377638734891), np.float64(0.6630208939255725), np.float64(0.6809578709966487)], 'brier_score': [np.float64(0.41276092402962206), np.float64(0.38191795026744835), np.float64(0.3970893502851605), np.float64(0.4086730163595624), np.float64(0.40240430210508266)], 'mae': [764.8526970954357, 704.9872340425532, 745.1261061946902, 765.056768558952, 751.3325892857143], 'mean_c_index': np.float64(0.67154226449969), 'mean_brier_score': np.float64(0.4005691086093752), 'mean_mae': np.float64(746.271079035469), 'c_index_test': np.float64(0.6709395182252439), 'brier_score_test': np.float64(0.3998098357967334), 'mae_test': 730.8181818181819}, {'hyperparams': {'n_trees': 100, 'max_depth': 5, 'min_samples_split': 2, 'min_samples_leaf': 2}, 'c_index': [np.float64(0.6775146033811148), np.float64(0.6701803855213107), np.float64(0.6587236207169122), np.float64(0.6531914963016763), np.float64(0.6689490259366985)], 'brier_score': [np.float64(0.37272037690715804), np.float64(0.3467929215322806), np.float64(0.3687597729385761), np.float64(0.35789826341939346), np.float64(0.36484122001482416)], 'mae': [626.5954356846473, 605.1510638297873, 646.1946902654868, 611.3580786026201, 640.8660714285714], 'mean_c_index': np.float64(0.6657118263715425), 'mean_brier_score': np.float64(0.36220251096244643), 'mean_mae': np.float64(626.0330679622226), 'c_index_test': np.float64(0.6640765890425739), 'brier_score_test': np.float64(0.3742875702211002), 'mae_test': 635.7558922558923}, {'hyperparams': {'n_trees': 100, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 2}, 'c_index': [np.float64(0.6913989978364135), np.float64(0.6771443888880431), np.float64(0.6716482998852502), np.float64(0.6647442051621054), np.float64(0.6853277518053829)], 'brier_score': [np.float64(0.3889433259324809), np.float64(0.3638781836113889), np.float64(0.37971719818234523), np.float64(0.3875348776924566), np.float64(0.37772651377270466)], 'mae': [697.7323651452282, 655.3638297872341, 696.70796460177, 708.4192139737992, 689.984375], 'mean_c_index': np.float64(0.678052728715439), 'mean_brier_score': np.float64(0.37956001983827525), 'mean_mae': np.float64(689.6415497016063), 'c_index_test': np.float64(0.6765959787179484), 'brier_score_test': np.float64(0.3851565938672346), 'mae_test': 687.2323232323232}, {'hyperparams': {'n_trees': 50, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 2}, 'c_index': [np.float64(0.6911438735378672), np.float64(0.6727059785599172), np.float64(0.6684117528760046), np.float64(0.6673704879960771), np.float64(0.6823562973238106)], 'brier_score': [np.float64(0.38597415164313253), np.float64(0.36856898901790325), np.float64(0.3807329281864954), np.float64(0.39117984221662366), np.float64(0.3753760542137567)], 'mae': [687.649377593361, 665.1893617021277, 699.1393805309734, 712.8231441048035, 687.2098214285714], 'mean_c_index': np.float64(0.6763976780587353), 'mean_brier_score': np.float64(0.38036639305558234), 'mean_mae': np.float64(690.4022170719675), 'c_index_test': np.float64(0.6760256735416231), 'brier_score_test': np.float64(0.38737335811010476), 'mae_test': 690.1212121212121}, {'hyperparams': {'n_trees': 20, 'max_depth': 15, 'min_samples_split': 2, 'min_samples_leaf': 2}, 'c_index': [np.float64(0.6841947735965126), np.float64(0.6735987716211426), np.float64(0.6673599691993001), np.float64(0.6669100322808269), np.float64(0.6792419379620904)], 'brier_score': [np.float64(0.4177515639073042), np.float64(0.37835935551580924), np.float64(0.3964597074104621), np.float64(0.41520456915040294), np.float64(0.39187343754889853)], 'mae': [776.2427385892116, 704.5340425531915, 746.608407079646, 778.2816593886463, 728.484375], 'mean_c_index': np.float64(0.6742610969319746), 'mean_brier_score': np.float64(0.39992972670657545), 'mean_mae': np.float64(746.8302445221391), 'c_index_test': np.float64(0.6699712605425886), 'brier_score_test': np.float64(0.41683933678497637), 'mae_test': 769.4629629629629}, {'hyperparams': {'n_trees': 20, 'max_depth': 15, 'min_samples_split': 5, 'min_samples_leaf': 1}, 'c_index': [np.float64(0.6903116823735617), np.float64(0.6617700791443106), np.float64(0.6725350029951099), np.float64(0.6620988952324622), np.float64(0.6859251586727683)], 'brier_score': [np.float64(0.40293047392422804), np.float64(0.3853359275398376), np.float64(0.3981961970702808), np.float64(0.40931638752708177), np.float64(0.384891208390807)], 'mae': [738.2946058091286, 708.6042553191489, 746.8650442477876, 766.6659388646289, 707.8883928571429], 'mean_c_index': np.float64(0.6745281636836425), 'mean_brier_score': np.float64(0.396134038890447), 'mean_mae': np.float64(733.6636474195673), 'c_index_test': np.float64(0.6747232198281238), 'brier_score_test': np.float64(0.394410265792323), 'mae_test': 717.976430976431}]
+Traceback (most recent call last):
+  File "/tmp/Survival-Tree-Analysis/src/main_experiment.py", line 100, in <module>
+    run([
+  File "/tmp/Survival-Tree-Analysis/src/main_experiment.py", line 79, in run
+    dump_results_to_csv(res, path_res)
+  File "/tmp/Survival-Tree-Analysis/src/utils/utils.py", line 96, in dump_results_to_csv
+    df.to_csv(path, index=False)
+  File "/home4/s5764971/venvs/umcg_env/lib/python3.11/site-packages/pandas/util/_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home4/s5764971/venvs/umcg_env/lib/python3.11/site-packages/pandas/core/generic.py", line 3967, in to_csv
+    return DataFrameRenderer(formatter).to_csv(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home4/s5764971/venvs/umcg_env/lib/python3.11/site-packages/pandas/io/formats/format.py", line 1014, in to_csv
+    csv_formatter.save()
+  File "/home4/s5764971/venvs/umcg_env/lib/python3.11/site-packages/pandas/io/formats/csvs.py", line 251, in save
+    with get_handle(
+         ^^^^^^^^^^^
+  File "/home4/s5764971/venvs/umcg_env/lib/python3.11/site-packages/pandas/io/common.py", line 749, in get_handle
+    check_parent_directory(str(handle))
+  File "/home4/s5764971/venvs/umcg_env/lib/python3.11/site-packages/pandas/io/common.py", line 616, in check_parent_directory
+    raise OSError(rf"Cannot save file into a non-existent directory: '{parent}'")
+OSError: Cannot save file into a non-existent directory: 'results'
+tar: Removing leading `/' from member names
+tar: /tmp/results/models: Cannot stat: No such file or directory
+tar: Exiting with failure status due to previous errors
+cp: cannot stat '/tmp/results/results_rsf_support.csv': No such file or directory
+
+###############################################################################
+Hábrók Cluster
+Job 17967438 for user s5764971
+Finished at: Tue Jun 17 20:44:13 CEST 2025
+
+Job details:
+============
+
+Job ID                         : 17967438
+Name                           : RSForest-experiment-support
+User                           : s5764971
+Partition                      : himemshort
+Nodes                          : memory1
+Number of Nodes                : 1
+Cores                          : 10
+Number of Tasks                : 1
+State                          : FAILED  
+Submit                         : 2025-06-17T20:31:41
+Start                          : 2025-06-17T20:31:42
+End                            : 2025-06-17T20:44:09
+Reserved walltime              : 02:00:00
+Used walltime                  : 00:12:27
+Used CPU time                  : 00:12:19 (Efficiency:  9.90%)
+% User (Computation)           : 79.35%
+% System (I/O)                 : 20.65%
+Total memory reserved          : 240G
+Maximum memory used            : 9.41G
+Hints and tips      :
+ 1) The program efficiency is very low. Your program does not seem to run in
+    parallel. Please check the program documentation to see how to make the
+    program run in parallel.
+    If you can't find information about this, the program will not run in
+    parallel! Stop requesting multiple CPU cores if that is the case.
+ 2) You requested much more CPU memory than your program used.
+    Please reduce the requested amount of memory.
+ *) For more information on these issues see:
+    https://wiki.hpc.rug.nl/habrok/additional_information/job_hints
+
+Acknowledgements:
+=================
+
+Please see this page for information about acknowledging Hábrók in your publications:
+
+https://wiki.hpc.rug.nl/habrok/introduction/scientific_output
+
+################################################################################

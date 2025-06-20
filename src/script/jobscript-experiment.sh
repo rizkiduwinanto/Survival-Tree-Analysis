@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=Forest-experiment
-#SBATCH --output=Forest-experiment_%j_%a.out
+#SBATCH --output=logs/Forest-experiment_%j_%a.out
 #SBATCH --time=72:00:00
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=16GB
@@ -11,7 +11,7 @@
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
 
-export WANDB_API_KEY=<WANDB_API_KEY>
+export WANDB_API_KEY=792c7896914a8e8e361566d5bddddf821e40fc53
 
 wandb login
 
@@ -25,17 +25,15 @@ cp $TMPDIR/results/${OUTPUT_FILE} /home4/$USER/job_${SLURM_JOBID}/' 12
 
 CONFIGURATIONS=(
     "extreme --no-is_custom_dist --no-is_bootstrap"
-    "norm --no-is_custom_dist --no-is_bootstrap"
+    "normal --no-is_custom_dist --no-is_bootstrap"
     "logistic --no-is_custom_dist --no-is_bootstrap"
-    
     "extreme --is_custom_dist --no-is_bootstrap"
-    "norm --is_custom_dist --no-is_bootstrap"
+    "normal --is_custom_dist --no-is_bootstrap"
     "logistic --is_custom_dist --no-is_bootstrap"
     "weibull --is_custom_dist --no-is_bootstrap"
     "gmm --is_custom_dist --no-is_bootstrap"
-    
     "extreme --is_custom_dist --is_bootstrap"
-    "norm --is_custom_dist --is_bootstrap"
+    "normal --is_custom_dist --is_bootstrap"
     "logistic --is_custom_dist --is_bootstrap"
     "weibull --is_custom_dist --is_bootstrap"
     "gmm --is_custom_dist --is_bootstrap"
@@ -58,7 +56,7 @@ CMD="python3 src/main_experiment.py \
     --path=\"$TMPDIR/results/models\" \
     --path-res=\"$TMPDIR/results/${OUTPUT_FILE}\" \
     --aggregator=\"mean\" \
-    --is_split_fitting
+    --no-is_split_fitting
     $FLAGS"
 
 echo "Running configuration $SLURM_ARRAY_TASK_ID: $FUNCTION with $FLAGS"

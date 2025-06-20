@@ -17,17 +17,15 @@ wandb login
 
 CONFIGURATIONS=(
     "extreme --no-is_custom_dist --no-is_bootstrap"
-    "norm --no-is_custom_dist --no-is_bootstrap"
+    "normal --no-is_custom_dist --no-is_bootstrap"
     "logistic --no-is_custom_dist --no-is_bootstrap"
-    
     "extreme --is_custom_dist --no-is_bootstrap"
-    "norm --is_custom_dist --no-is_bootstrap"
+    "normal --is_custom_dist --no-is_bootstrap"
     "logistic --is_custom_dist --no-is_bootstrap"
     "weibull --is_custom_dist --no-is_bootstrap"
     "gmm --is_custom_dist --no-is_bootstrap"
-    
     "extreme --is_custom_dist --is_bootstrap"
-    "norm --is_custom_dist --is_bootstrap"
+    "normal --is_custom_dist --is_bootstrap"
     "logistic --is_custom_dist --is_bootstrap"
     "weibull --is_custom_dist --is_bootstrap"
     "gmm --is_custom_dist --is_bootstrap"
@@ -40,7 +38,7 @@ SAFE_FLAGS=$(echo "$FLAGS" | tr ' ' '_')
 
 CMD="python3 src/main_experiment.py \
     --parameter=\"aftforest\" \
-    --dataset=\"nhanes\" \
+    --dataset=\"support\" \
     --function=\"$FUNCTION\" \
     --no-is_grid \
     --is_cv \
@@ -50,10 +48,9 @@ CMD="python3 src/main_experiment.py \
     --path=\"$TMPDIR/results/models\" \
     --path-res=\"$TMPDIR/results/${OUTPUT_FILE}\" \
     --aggregator=\"mean\" \
-    --is_split_fitting
+    --no-is_split_fitting
     $FLAGS"
 
 echo "Running configuration $SLURM_ARRAY_TASK_ID: $FUNCTION with $FLAGS"
 echo "Command: $CMD"
-eval $CMD
-
+eval $CMD &
