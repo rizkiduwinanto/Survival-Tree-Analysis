@@ -8,7 +8,6 @@ from tree.tree import AFTSurvivalTree
 from wrapper.xgboost_aft.xgboost_aft import XGBoostAFTWrapper
 from wrapper.random_survival_forest_scikit.random_survival_forest import RandomSurvivalForestWrapper
 from utils.param_grid import get_parameter
-from utils.sweep_param_grid import get_sweep_param_grid
 import os
 import wandb
 
@@ -216,8 +215,8 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
     combinations_index = 0
 
     with wandb.init(
-        entity="rizkiduwinanto-university-of-groningen",
-        project="random-forest-aft",
+        project="rizkiduwinanto-university-of-groningen",
+        notes="thesis",
         tags=[model, function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist", dataset]
     ) as run:
         for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
