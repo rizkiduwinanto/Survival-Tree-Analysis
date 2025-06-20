@@ -15,14 +15,6 @@ export WANDB_API_KEY=<WANDB_API_KEY>
 
 wandb login
 
-mkdir -p $TMPDIR/results
-cp -R /home4/$USER/Survival-Tree-Analysis $TMPDIR/Survival-Tree-Analysis
-cd $TMPDIR/Survival-Tree-Analysis
-
-trap 'mkdir -p /home4/$USER/job_${SLURM_JOBID}
-tar czvf /home4/$USER/job_${SLURM_JOBID}/models.tar.gz $TMPDIR/models
-cp $TMPDIR/results/${OUTPUT_FILE} /home4/$USER/job_${SLURM_JOBID}/' 12
-
 CONFIGURATIONS=(
     "extreme --no-is_custom_dist --no-is_bootstrap"
     "norm --no-is_custom_dist --no-is_bootstrap"
@@ -48,7 +40,7 @@ SAFE_FLAGS=$(echo "$FLAGS" | tr ' ' '_')
 
 CMD="python3 src/main_experiment.py \
     --parameter=\"aftforest\" \
-    --dataset=\"support\" \
+    --dataset=\"nhanes\" \
     --function=\"$FUNCTION\" \
     --no-is_grid \
     --is_cv \
@@ -63,9 +55,5 @@ CMD="python3 src/main_experiment.py \
 
 echo "Running configuration $SLURM_ARRAY_TASK_ID: $FUNCTION with $FLAGS"
 echo "Command: $CMD"
-eval $CMD &
-wait
+eval $CMD
 
-mkdir -p /home4/$USER/job_${SLURM_JOBID}
-tar czvf /home4/$USER/job_${SLURM_JOBID}/models.tar.gz $TMPDIR/results/models
-cp $TMPDIR/results/${OUTPUT_FILE} /home4/$USER/job_${SLURM_JOBID}/

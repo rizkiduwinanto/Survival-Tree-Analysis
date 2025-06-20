@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Forest-experiment
-#SBATCH --output=Forest-experiment_%j_%a.out
-#SBATCH --time=72:00:00
+#SBATCH --job-name=tree-experiment
+#SBATCH --output=tree-experiment_%j_%a.out
+#SBATCH --time=06:00:00
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=16GB
 #SBATCH --partition=gpu
@@ -47,7 +47,7 @@ OUTPUT_FILE="results_${FUNCTION}_${SLURM_ARRAY_TASK_ID}.csv"
 SAFE_FLAGS=$(echo "$FLAGS" | tr ' ' '_')
 
 CMD="python3 src/main_experiment.py \
-    --parameter=\"aftforest\" \
+    --parameter=\"afttree\" \
     --dataset=\"support\" \
     --function=\"$FUNCTION\" \
     --no-is_grid \
