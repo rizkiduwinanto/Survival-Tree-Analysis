@@ -7,8 +7,8 @@ tree_param_grid = {
 
 forest_param_grid = {
     **tree_param_grid,
-    'n_trees': [50, 100, 150],
-    'percent_len_sample_forest': [0.37, 0.5, 0.75],
+    'n_trees': [10, 20, 50, 70, 100],
+    'percent_len_sample_forest': [0.25, 0.37, 0.5, 0.75],
 }
 
 custom_fitting_param_grid = {

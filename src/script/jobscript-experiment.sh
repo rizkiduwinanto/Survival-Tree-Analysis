@@ -5,7 +5,7 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=16GB
 #SBATCH --partition=gpu
-#SBATCH --cpus-per-task=6
+#SBATCH --cpus-per-task=12
 #SBATCH --array=1-13
 
 module load CUDA/12.4.0
