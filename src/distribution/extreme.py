@@ -51,8 +51,12 @@ class LogExtremeNew(Distribution):
             resampled_y = self.y[sample_indices]
 
             resampled_times, resampled_events = self.unpack_data(resampled_y)
+            
+            uncensored_times = np.array(resampled_times)[np.array(resampled_events) == 1]
+            if len(uncensored_times) == 0:
+                continue
 
-            loc, scale = self._fit(resampled_times[resampled_events == 1])
+            loc, scale = self._fit(uncensored_times)
             loc_cdf, scale_cdf = self._fit(resampled_times)
 
             bootstrap_scales.append(scale)
