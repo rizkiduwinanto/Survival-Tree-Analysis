@@ -48,7 +48,7 @@ SAFE_FLAGS=$(echo "$FLAGS" | tr ' ' '_')
 
 CMD="python3 src/main_experiment.py \
     --parameter=\"afttree\" \
-    --dataset=\"support\" \
+    --dataset=\"nhanes\" \
     --function=\"$FUNCTION\" \
     --no-is_grid \
     --is_cv \
