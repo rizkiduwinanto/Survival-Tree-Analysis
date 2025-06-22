@@ -11,7 +11,7 @@
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
 
-export WANDB_API_KEY=792c7896914a8e8e361566d5bddddf821e40fc53
+export WANDB_API_KEY=<WANDB_API_KEY>
 
 wandb login
 

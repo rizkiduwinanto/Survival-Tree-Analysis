@@ -182,7 +182,7 @@ class AFTForest():
             with streams[stream_idx]:
                 for tree_idx in range(stream_idx, self.n_trees, n_streams):
                     tree = self.trees[tree_idx]
-                    tree.rf_fit()
+                    tree.special_fit()
 
         cp.cuda.Device().synchronize()
 
