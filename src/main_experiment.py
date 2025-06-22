@@ -24,6 +24,7 @@ def run(args):
     is_bootstrap = args[10]
     is_custom_dist = args[11]
     aggregator = args[12]
+    is_split_fitting = args[13]
 
     if dataset.lower() == "veteran":
         df = pd.read_csv('data/veterans_lung_cancer.csv')
@@ -46,6 +47,7 @@ def run(args):
         'is_bootstrap': False if not is_bootstrap else is_bootstrap,
         'is_custom_dist': False if not is_custom_dist else is_custom_dist,
         'aggregator': aggregator,
+        'is_split_fitting': False if not is_split_fitting else is_split_fitting
     }
 
     if type_algo.lower() == "aftforest": 
@@ -111,7 +113,8 @@ if __name__ == "__main__":
         args.function,
         args.is_bootstrap,
         args.is_custom_dist,
-        args.aggregator
+        args.aggregator,
+        args.is_split_fitting
     ])
 
 

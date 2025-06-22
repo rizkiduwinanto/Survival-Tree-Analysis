@@ -103,6 +103,21 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
             y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
 
         if model == "AFTForest":
+            params = {
+                'function': model_params.get('function', 'norm'),
+                'is_bootstrap': model_params.get('is_bootstrap', False),
+                'is_custom_dist': model_params.get('is_custom_dist', False),
+                'n_components': model_params.get('n_components', 1),
+                'max_depth': model_params.get('max_depth', None),
+                'min_samples_split': model_params.get('min_samples_split', 2),
+                'min_samples_leaf': model_params.get('min_samples_leaf', 1),
+                'sigma': model_params.get('sigma', 0.1),
+                'n_samples': model_params.get('n_samples', 100),
+                'percent_len_sample_forest': model_params.get('percent_len_sample_forest', 0.5),
+                'test_size': model_params.get('test_size', 0.2),
+                'aggregator': model_params.get('aggregator', 'mean'),
+                'split_fitting': model_params.get('split_fitting', False),
+            }
             one_model = AFTForest(random_state=42, **model_params)
         elif model == "AFTSurvivalTree":
             params = {
@@ -116,6 +131,7 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
                 'sigma': model_params.get('sigma', 0.1),
                 'n_samples': model_params.get('n_samples', 100),
                 'percent_len_sample': model_params.get('percent_len_sample', 0.5),
+                'aggregator': model_params.get('aggregator', 'mean'),
                 'test_size': model_params.get('test_size', 0.2),
             }
             one_model = AFTSurvivalTree(**params)
@@ -228,7 +244,15 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
                 'function': kwargs.get('function', 'normal'),
                 'is_bootstrap': kwargs.get('is_bootstrap', False),
                 'is_custom_dist': kwargs.get('is_custom_dist', False),
+                'aggregator': kwargs.get('aggregator', 'mean'),
             }
+
+            if model == "AFTForest":
+                params = { 
+                    **params,
+                    'split_fitting': kwargs.get('is_split_fitting', False),
+                }
+
 
             print("Hyperparameters:", params)
 

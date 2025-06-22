@@ -6,7 +6,7 @@
 #SBATCH --mem=16GB
 #SBATCH --partition=gpu
 #SBATCH --cpus-per-task=16
-#SBATCH --array=1-3
+#SBATCH --array=1-13
 
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
@@ -27,16 +27,16 @@ CONFIGURATIONS=(
     "extreme --no-is_custom_dist --no-is_bootstrap"
     "normal --no-is_custom_dist --no-is_bootstrap"
     "logistic --no-is_custom_dist --no-is_bootstrap"
-    # "extreme --is_custom_dist --no-is_bootstrap"
-    # "normal --is_custom_dist --no-is_bootstrap"
-    # "logistic --is_custom_dist --no-is_bootstrap"
-    # "weibull --is_custom_dist --no-is_bootstrap"
-    # "gmm --is_custom_dist --no-is_bootstrap"
-    # "extreme --is_custom_dist --is_bootstrap"
-    # "normal --is_custom_dist --is_bootstrap"
-    # "logistic --is_custom_dist --is_bootstrap"
-    # "weibull --is_custom_dist --is_bootstrap"
-    # "gmm --is_custom_dist --is_bootstrap"
+    "extreme --is_custom_dist --no-is_bootstrap"
+    "normal --is_custom_dist --no-is_bootstrap"
+    "logistic --is_custom_dist --no-is_bootstrap"
+    "weibull --is_custom_dist --no-is_bootstrap"
+    "gmm --is_custom_dist --no-is_bootstrap"
+    "extreme --is_custom_dist --is_bootstrap"
+    "normal --is_custom_dist --is_bootstrap"
+    "logistic --is_custom_dist --is_bootstrap"
+    "weibull --is_custom_dist --is_bootstrap"
+    "gmm --is_custom_dist --is_bootstrap"
 )
 
 IFS=' ' read -r FUNCTION FLAGS <<< "${CONFIGURATIONS[$SLURM_ARRAY_TASK_ID - 1]}"
@@ -56,7 +56,7 @@ CMD="python3 src/main_experiment.py \
     --path=\"$TMPDIR/results/models\" \
     --path-res=\"$TMPDIR/results/${OUTPUT_FILE}\" \
     --aggregator=\"mean\" \
-    --no-is_split_fitting
+    --is_split_fitting
     $FLAGS"
 
 echo "Running configuration $SLURM_ARRAY_TASK_ID: $FUNCTION with $FLAGS"
