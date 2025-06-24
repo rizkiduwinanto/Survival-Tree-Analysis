@@ -6,7 +6,7 @@
 #SBATCH --mem=20GB
 #SBATCH --partition=gpu
 #SBATCH --cpus-per-task=6
-#SBATCH --array=1-3
+#SBATCH --array=1-13
 
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
