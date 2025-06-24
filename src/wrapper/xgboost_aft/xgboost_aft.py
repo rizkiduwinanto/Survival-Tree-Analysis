@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from utils.metrics.metrics import c_index, brier, auc, mae
+import pickle
 
 class XGBoostAFTWrapper(Wrapper):
     """
@@ -118,3 +119,13 @@ class XGBoostAFTWrapper(Wrapper):
         pred_times = self.predict(X)
         y_new = self.bin_y(y)
         return mae(pred_times, y_new)
+
+    def save(self, path):
+        pickle.dump(self.model, open(path, 'wb'))
+
+    @classmethod
+    def load(cls, path):
+        model = pickle.load(open(path, 'rb'))
+        wrapper = cls()
+        wrapper.model = model
+        return wrapper

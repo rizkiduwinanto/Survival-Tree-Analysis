@@ -182,6 +182,8 @@ def run(args):
         end = time.time()
         score = xgboost_aft._score(X_test, y_test)
         print("Score: ", score)
+
+        xgboost_aft.save(path_to_save)
     elif type_algo.lower() == "randomsurvivalforest":
         rsf = RandomSurvivalForestWrapper(
             n_trees=n_trees,
@@ -198,6 +200,7 @@ def run(args):
         print("Score: ", score)
         score_scikit = rsf.score(X_test, y_test)
         print("Score scikit: ", score_scikit)
+        rsf.save(path_to_save)
     else:
         raise ValueError("Algorithm not found")
 

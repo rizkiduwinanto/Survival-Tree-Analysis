@@ -1,6 +1,7 @@
 from sksurv.ensemble import RandomSurvivalForest
 from utils.metrics.metrics import c_index, brier, auc, mae
 import numpy as np
+import joblib
 
 class RandomSurvivalForestWrapper:
     def __init__(
@@ -66,3 +67,13 @@ class RandomSurvivalForestWrapper:
     def _mae(self, X, y):
         pred_times = self.predict_median(X)
         return mae(pred_times, y)
+
+    def save(self, path):
+        joblib.dump(self.model, path)
+
+    @classmethod
+    def load(cls, path):
+        model = joblib.load(path)
+        wrapper = cls()
+        wrapper.model = model
+        return wrapper

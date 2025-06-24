@@ -60,6 +60,9 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
         elif model == "AFTSurvivalTree":
             path_dir = os.path.join(path, f"model_{i+1}.json")
             one_model.save(path_dir)
+        else:
+            path_dir = os.path.join(path, f"model_{i+1}.pkl")
+            one_model.save(path_dir)
 
         # Check if this model is the best one
         if c_index > best_c_index:
@@ -75,6 +78,9 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
             best_model.save(best_path_dir)
         elif model == "AFTSurvivalTree":
             best_path_dir = os.path.join(path, "best_model.json")
+            best_model.save(best_path_dir)
+        else:
+            best_path_dir = os.path.join(path, "best_model.pkl")
             best_model.save(best_path_dir)
 
     return c_indexes, brier_scores, maes
@@ -184,6 +190,9 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         elif model == "AFTSurvivalTree":
             path_dir = os.path.join(path, f"comb_{combinations_index+1}_fold_{index+1}.json")
             one_model.save(path_dir)
+        else:
+            path_dir = os.path.join(path, f"comb_{combinations_index+1}_fold_{index+1}.pkl")
+            one_model.save(path_dir)
 
         index += 1
 
@@ -205,6 +214,9 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
             best_model.save(best_path_dir)
         elif model == "AFTSurvivalTree":
             best_path_dir = os.path.join(path, f"best_model_combi_{combinations_index+1}.json")
+            best_model.save(best_path_dir)
+        else:
+            best_path_dir = os.path.join(path, f"best_model_combi_{combinations_index+1}.pkl")
             best_model.save(best_path_dir)
         
     return fold_c_indexes, fold_brier_scores, fold_maes, c_index_test, brier_score_test, mae_test
