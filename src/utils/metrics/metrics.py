@@ -11,10 +11,10 @@ def c_index(pred_times, y):
         param: y: list of tuples, where each tuple is (censored, time)
         return: float, the concordance index
     """
-    event_true = [0 if not censored else 1 for censored, _ in y]
+    event_observed = [1 if event_occurred else 0 for event_occurred, _ in y]
     times_true = [time for _, time in y]
 
-    c_index = concordance_index(times_true, pred_times, event_true)
+    c_index = concordance_index(times_true, pred_times, event_observed)
     return c_index
 
 def brier(pred_times, y):

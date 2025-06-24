@@ -524,12 +524,12 @@ class AFTSurvivalTree():
                 Predicted values. If None, the mean of y_time is used.
             :return: float, the total loss for the given survival data
         """
-        is_censored = y_death.astype(bool)
+        is_uncensored = y_death.astype(bool)
 
         uncensored_loss = self.get_uncensored_value(y_time, pred)
         censored_loss = self.get_censored_value(y_time, cp.inf, pred)
 
-        loss = cp.where(is_censored, uncensored_loss, censored_loss)
+        loss = cp.where(is_uncensored, uncensored_loss, censored_loss)
 
         return cp.sum(loss)
     
