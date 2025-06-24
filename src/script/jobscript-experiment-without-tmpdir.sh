@@ -46,10 +46,10 @@ CMD="python3 src/main_experiment.py \
     --n_tries=10 \
     --n_models=5 \
     --n_splits=5 \
-    --path=\"results/models\" \
+    --path=\"${PATH}\" \
     --path-res=\"results/${OUTPUT_FILE}\" \
-    --aggregator=\"mean\" \
-    --no-is_split_fitting
+    --aggregator=\"median\" \
+    --is_split_fitting
     $FLAGS"
 
 echo "Running configuration $SLURM_ARRAY_TASK_ID: $FUNCTION with $FLAGS"
