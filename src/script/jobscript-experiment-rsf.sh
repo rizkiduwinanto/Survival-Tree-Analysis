@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=RSForest-experiment-support
-#SBATCH --output=RSForest-experiment-support.out
+#SBATCH --job-name=RSForest-experiment-support-%A_%a
+#SBATCH --output=logs/RSForest-experiment-%A_%a.out
 #SBATCH --time=01:00:00
 #SBATCH --cpus-per-task=10
 #SBATCH --mem-per-cpu=24GB
+#SBATCH --array=1-2
 
-module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
 
-export WANDB_API_KEY=<WANDB_API_KEY>
+export WANDB_API_KEY=792c7896914a8e8e361566d5bddddf821e40fc53
 
 wandb login
 
@@ -27,7 +27,7 @@ cp $TMPDIR/results/${OUTPUT_FILE} /home4/$USER/job_${SLURM_JOB_ID}_${SLURM_ARRAY
 
 CMD="python3 src/main_experiment.py \
     --parameter=\"randomsurvivalforest\" \
-    --dataset=\"support\" \
+    --dataset=\"${DATASET}\" \
     --no-is_grid \
     --is_cv \
     --n_tries=10 \
