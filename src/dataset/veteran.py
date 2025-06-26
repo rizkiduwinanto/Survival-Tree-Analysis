@@ -22,7 +22,7 @@ class VeteranLungDataset(Dataset):
 
     def create_label(self):
         label = pd.DataFrame()
-        label['death'] = [0 if x < np.inf else 1 for x in self.data['Survival_label_upper_bound']]
+        label['death'] = [1 if x < np.inf else 0 for x in self.data['Survival_label_upper_bound']]
         label['d.time'] = self.data['Survival_label_lower_bound']
         record = label.to_records(index=False)
         structured_arr = np.stack(record, axis=0)

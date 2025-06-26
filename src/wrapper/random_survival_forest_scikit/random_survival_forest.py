@@ -28,7 +28,7 @@ class RandomSurvivalForestWrapper:
         self.model.fit(X, y_struct)
 
     def predict(self, X):
-        return self.model.predict_survival_function(X)
+        return self.predict_median(X)
 
     def predict_risk(self, X):
         return self.model.predict(X)

@@ -17,6 +17,7 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
+FIXED_N_TREES = [10, 20, 50, 70, 100] 
 
 def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10, **model_params):
     c_indexes = []
@@ -229,6 +230,9 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
     is_custom_dist = kwargs.get('is_custom_dist', False)
 
     param_grid = get_parameter(model, function, is_custom_dist, is_bootstrap)
+    
+    if model == "AFTForest":
+        sampled_n_trees = [random.choice(FIXED_N_TREES) for _ in range(n_tries)]
 
     combinations = list(itertools.product(*param_grid.values()))
 
@@ -250,6 +254,9 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
     ) as run:
         for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
             hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
+
+            if model == "AFTForest":
+                hyperparam_dict['n_trees'] = sampled_n_trees[combinations_index]
 
             params = {
                 **hyperparam_dict,

@@ -218,7 +218,7 @@ class AFTSurvivalTree():
         :return: TreeNode
         """
 
-        value = self.mean_y(y_time) if self.aggregator == "mean" else self.median_y(y_time)
+        value = self.set_leaf_value(y_time)
 
         if depth > self.max_depth or len(y_time) < self.min_samples_split:
             node = TreeNode(None, None, value, None, None, num_sample=len(y_time))
@@ -295,7 +295,7 @@ class AFTSurvivalTree():
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
-            value = self.mean_y(y_time_current) if self.aggregator == "mean" else self.median_y(y_time_current)
+            value = self.set_leaf_value(y_time_current)
 
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
                 parent_node.set_value(value)
@@ -379,7 +379,7 @@ class AFTSurvivalTree():
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
-            value = self.mean_y(y_time_current) if self.aggregator == "mean" else self.median_y(y_time_current)
+            value = self.set_leaf_value(y_time_current)
 
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
                 parent_node.set_value(value)
@@ -426,6 +426,22 @@ class AFTSurvivalTree():
                 })
 
         return self.tree
+
+    def set_leaf_value(self, y_time_current):
+        """
+        Set the value of the node based on the survival times.
+        :param y_time_current: array-like, shape (n_samples,)
+            Array of survival times.
+        :return: None
+        """
+        if self.aggregator == "mean":
+            self.value = cp.exp(self.mean_y(cp.log(y_time_current)))
+        elif self.aggregator == "median":
+            self.value = cp.exp(self.median_y(cp.log(y_time_current)))
+        else:
+            raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
+        
+        return self.value
 
     def get_best_split_vectorized(self, X, y_death, y_time):
         """
@@ -618,7 +634,10 @@ class AFTSurvivalTree():
         """
         try:
             if tree.value is not None:
-                return tree.value.get()
+                if isinstance(tree.value, cp.ndarray):
+                    return tree.value.get()
+                else:
+                    return tree.value
             else:
                 feature_value = X[tree.feature_index]
                 if feature_value <= tree.threshold:

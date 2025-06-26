@@ -7,7 +7,6 @@ tree_param_grid = {
 
 forest_param_grid = {
     **tree_param_grid,
-    'n_trees': [10, 20, 50, 70, 100],
     'percent_len_sample_forest': [0.25, 0.37, 0.5, 0.75],
 }
 
@@ -26,7 +25,7 @@ gmm_param_grid = {
 
 xgboost_param_grid = {
     'max_depth': [3, 6, 10],
-    'sigma': [0.01, 0.05, 0.1],
+    'sigma': [0.01, 0.1, 1, 10],
     'learning_rate': [0.01, 0.05, 0.1],
     'lambda_': [0.01, 0.1, 1],
     'alpha': [0.01, 0.1, 1],
