@@ -66,13 +66,9 @@ def mae(pred_times, y):
         param: y: list of tuples, where each tuple is (censored, time)
         return: float, the mean absolute error
     """
-    event_mask = np.array([not censored for censored, _ in y])
+    event_mask = np.array([death for death, _ in y], dtype=bool)
     true_times = np.array([time for _, time in y])
     pred_times = np.array(pred_times)
 
-    finite_mask = event_mask & np.isfinite(true_times) & np.isfinite(pred_times)
-    if np.sum(finite_mask) == 0:
-        raise ValueError("No valid predictions to compute MAE.")
-
-    mae = mean_absolute_error(true_times[finite_mask], pred_times[finite_mask])
+    mae = mean_absolute_error(true_times[event_mask], pred_times[event_mask])
     return mae
