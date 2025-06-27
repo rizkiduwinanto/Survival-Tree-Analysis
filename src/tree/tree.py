@@ -218,7 +218,7 @@ class AFTSurvivalTree():
         :return: TreeNode
         """
 
-        value = self.set_leaf_value(y_time)
+        value = self.set_leaf_value(y_time, y_death)
 
         if depth > self.max_depth or len(y_time) < self.min_samples_split:
             node = TreeNode(None, None, value, None, None, num_sample=len(y_time))
@@ -242,9 +242,16 @@ class AFTSurvivalTree():
         y_time_right = y_time[right_indices]
         
 
-        if len( y_time_left) == 0 or len(y_time_right) == 0:
+        if len(y_time_left) == 0 or len(y_time_right) == 0:
             node = TreeNode(None, None, value, None, None, num_sample=len(y_time))
             if depth == 0: 
+                self.tree = node
+            return node
+
+        if cp.all(y_death_left == 0) or cp.all(y_death_right == 0):
+            # If all samples in one side are censored, we cannot split further
+            node = TreeNode(feature, None, value, None, None, num_sample=len(y_time))
+            if depth == 0:
                 self.tree = node
             return node
 
@@ -295,7 +302,7 @@ class AFTSurvivalTree():
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
-            value = self.set_leaf_value(y_time_current)
+            value = self.set_leaf_value(y_time_current, y_death_current)
 
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
                 parent_node.set_value(value)
@@ -315,6 +322,10 @@ class AFTSurvivalTree():
             y_time_right = y_time[right_indices]
 
             if len(X_left) == 0 or len(X_right) == 0:
+                parent_node.set_value(value)
+                continue
+
+            if cp.all(y_death_left == 0) or cp.all(y_death_right == 0): 
                 parent_node.set_value(value)
                 continue
 
@@ -379,7 +390,7 @@ class AFTSurvivalTree():
             depth = current_node['depth']
             parent_node = current_node['parent_node']
 
-            value = self.set_leaf_value(y_time_current)
+            value = self.set_leaf_value(y_time_current, y_death_current)
 
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
                 parent_node.set_value(value)
@@ -397,6 +408,14 @@ class AFTSurvivalTree():
             X_right = X[right_indices]
             y_death_right = y_death[right_indices]
             y_time_right = y_time[right_indices]
+
+            if len(X_left) == 0 or len(X_right) == 0:
+                parent_node.set_value(value)
+                continue
+
+            if cp.all(y_death_left == 0) or cp.all(y_death_right == 0): 
+                parent_node.set_value(value)
+                continue
 
             if (len(y_time_left) < self.min_samples_leaf) or (len(y_time_right) < self.min_samples_leaf):
                 parent_node.set_value(value)
@@ -427,21 +446,20 @@ class AFTSurvivalTree():
 
         return self.tree
 
-    def set_leaf_value(self, y_time_current):
+    def set_leaf_value(self, y_time_current, y_death_current):
         """
         Set the value of the node based on the survival times.
         :param y_time_current: array-like, shape (n_samples,)
             Array of survival times.
         :return: None
         """
-        if self.aggregator == "mean":
-            self.value = cp.exp(self.mean_y(cp.log(y_time_current)))
-        elif self.aggregator == "median":
-            self.value = cp.exp(self.median_y(cp.log(y_time_current)))
-        else:
-            raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
-        
-        return self.value
+        # if self.aggregator == "mean":
+        #     self.value = cp.exp(self.mean_y(cp.log(y_time_current)))
+        # elif self.aggregator == "median":
+        #     self.value = cp.exp(self.median_y(cp.log(y_time_current)))
+        # else:
+        #     raise ValueError("Aggregator not supported. Use 'mean' or 'median'.")
+        return self.median_y(y_time_current[y_death_current == 1])
 
     def get_best_split_vectorized(self, X, y_death, y_time):
         """

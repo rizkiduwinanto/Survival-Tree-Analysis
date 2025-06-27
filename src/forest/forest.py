@@ -252,8 +252,8 @@ class AFTForest():
             preds.append(tree.predict(X))
         np_preds = np.array(preds)
         np_preds = np_preds.flatten()
-        mean = np.exp(np.mean(np.log(np_preds)))
-        return mean
+        agg = np.median(np_preds)
+        return agg
 
     def _score(self, X, y):
         """
