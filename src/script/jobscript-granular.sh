@@ -23,12 +23,13 @@ trap 'mkdir -p /home4/$USER/job_${SLURM_JOBID}
 tar czvf /home4/$USER/job_${SLURM_JOBID}/results.tar.gz $TMPDIR/results' 12
 
 INDEX=$SLURM_ARRAY_TASK_ID
+HYPERPARAM_FILE="hyperparam/params_$INDEX.json"
 
 CMD="python3 src/main_granular.py \
     --index=$INDEX \
     --n_models=5 \
     --n_splits=5 \
-    --path_to_read="hyperparam"
+    --path_to_read=\"$HYPERPARAM_FILE\" \
     --path_models=\"$TMPDIR/results/models\" \
     --path_to_save=\"$TMPDIR/results\" \
     --path_to_image=\"$TMPDIR/results\" \

@@ -92,7 +92,6 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
             y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
 
         if model == "AFTForest":
-            print(f"Training AFTForest on fold {index+1} with params: {model_params}")
             params = {
                 'function': model_params.get('function', 'normal'),
                 'is_bootstrap': model_params.get('is_bootstrap', False),
@@ -108,7 +107,6 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
                 'aggregator': model_params.get('aggregator', 'mean'),
                 'split_fitting': model_params.get('split_fitting', False),
             }
-            print("AFTForest params:", params)
             one_model = AFTForest(random_state=42, **model_params)
         elif model == "AFTSurvivalTree":
             params = {

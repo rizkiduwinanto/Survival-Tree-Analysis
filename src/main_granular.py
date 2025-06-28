@@ -12,18 +12,16 @@ def run(args):
     """
     Run the AFT Forest/Tree experiment based on the provided arguments.
     """
-    index = args[0]
-    path_to_read = args[1]
-    path_to_save = args[2]
-    path_models = args[3]
-    n_models = args[4]
-    n_splits = args[5]
-    path_to_image = args[6]
+    path_to_read = args[0]
+    path_to_save = args[1]
+    path_models = args[2]
+    n_models = args[3]
+    n_splits = args[4]
+    path_to_image = args[5]
+    index = args[6]
 
-    # Read the hyperparameter set from the json file
-    file_name = f"params_{index}.json"
-
-    path_to_read = os.path.join(path_to_read, file_name)
+    if path_to_read is None or not os.path.exists(path_to_read):
+        raise ValueError(f"Path to read hyperparameter sets does not exist: {path_to_read}")
 
     with open(path_to_read, 'r') as file:
         hyperparameter_sets = json.load(file)
@@ -68,24 +66,24 @@ def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run AFT Forest/Tree Experiment granularly')
-    parser.add_argument('--index', type=int, help='Index of the hyperparameter set to run')
     parser.add_argument('--path_to_read', type=str, help='Path to the CSV file containing hyperparameter sets')
     parser.add_argument('--path_to_save', type=str, help='Path to save the results')
     parser.add_argument('--path_models', type=str, help='Path to save the models')
     parser.add_argument('--n_models', type=int, default=10, help='Number of models to train')
     parser.add_argument('--n_splits', type=int, default=5, help='Number of splits for cross-validation')
     parser.add_argument('--path_to_image', type=str, default='images', help='Path to save the images')
+    parser.add_argument('--index', type=int, default=1, help='Index of the hyperparameter set to run')
 
     args = parser.parse_args()
 
     run([
-        args.index,
         args.path_to_read,
         args.path_to_save,
         args.path_models,
         args.n_models,
         args.n_splits,
-        args.path_to_image
+        args.path_to_image,
+        args.index
     ])
 
 
