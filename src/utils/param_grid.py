@@ -1,5 +1,5 @@
 tree_param_grid = {
-    'max_depth': [5, 10, 15],
+    'max_depth': [3, 6, 10],
     'min_samples_split': [2, 10, 50, 100, 200],
     'min_samples_leaf': [1, 2, 5, 10, 50, 100, 200],
     'sigma': [0.1, 0.5, 1, 5, 10, 50],

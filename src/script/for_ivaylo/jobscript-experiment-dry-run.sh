@@ -29,11 +29,11 @@ DATASET="veteran"
 IFS=' ' read -r FUNCTION FLAGS <<< "${CONFIGURATIONS[$SLURM_ARRAY_TASK_ID - 1]}"
 
 mkdir -p "results"
-PATH="results/results_${DATASET}_${FUNCTION}_${SLURM_ARRAY_TASK_ID}"
+PATH_SAVE="results/results_${DATASET}_${FUNCTION}_${SLURM_ARRAY_TASK_ID}"
 OUTPUT_FILE="results/results_${DATASET}_${FUNCTION}_${SLURM_ARRAY_TASK_ID}.csv"
 SAFE_FLAGS=$(echo "$FLAGS" | tr ' ' '_')
 
-echo "Saving in path: ' $PATH"
+echo "Saving in path: ' $PATH_SAVE"
 echo "Output file: ' $OUTPUT_FILE"
 
 CMD="python3 src/main_experiment.py \
@@ -45,7 +45,7 @@ CMD="python3 src/main_experiment.py \
     --n_tries=10 \
     --n_models=5 \
     --n_splits=5 \
-    --path=\"${PATH}\" \
+    --path=\"${PATH_SAVE}\" \
     --path-res=\"results/${OUTPUT_FILE}\" \
     --aggregator=\"mean\" \
     --is_split_fitting

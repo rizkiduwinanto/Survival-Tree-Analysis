@@ -35,7 +35,7 @@ PATH_SAVE="results/results_${DATASET}_${FUNCTION}_${SLURM_ARRAY_TASK_ID}"
 OUTPUT_FILE="results/results_${DATASET}_${FUNCTION}_${SLURM_ARRAY_TASK_ID}.csv"
 SAFE_FLAGS=$(echo "$FLAGS" | tr ' ' '_')
 
-echo "Saving in path: ' $PATH"
+echo "Saving in path: ' $PATH_SAVE"
 echo "Output file: ' $OUTPUT_FILE"
 
 CMD="python3 src/main_experiment.py \

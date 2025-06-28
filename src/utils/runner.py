@@ -8,6 +8,7 @@ from tree.tree import AFTSurvivalTree
 from wrapper.xgboost_aft.xgboost_aft import XGBoostAFTWrapper
 from wrapper.random_survival_forest_scikit.random_survival_forest import RandomSurvivalForestWrapper
 from utils.param_grid import get_parameter
+from utils.utils import save_model, plot_survival_trees
 import os
 import wandb
 
@@ -51,42 +52,18 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
         maes.append(mae)
 
         print(f"Model {i+1} - C-Index: {c_index}, Brier Score: {brier_score}, MAE: {mae}")
+        save_model(one_model, path, f"model_{i+1}_{model}")
 
-        # Save the model if needed
-        if model == "AFTForest":
-            path_dir = os.path.join(path, f"model_{i+1}")
-            if not os.path.exists(path_dir):
-                os.makedirs(path_dir)
-            one_model.save(path_dir)
-        elif model == "AFTSurvivalTree":
-            path_dir = os.path.join(path, f"model_{i+1}.json")
-            one_model.save(path_dir)
-        else:
-            path_dir = os.path.join(path, f"model_{i+1}.pkl")
-            one_model.save(path_dir)
-
-        # Check if this model is the best one
         if c_index > best_c_index:
             best_model = one_model
             best_c_index = c_index
         
-    # Save the best model if needed
     if best_model is not None:
-        if model == "AFTForest":
-            best_path_dir = os.path.join(path, "best_model")
-            if not os.path.exists(best_path_dir):
-                os.makedirs(best_path_dir)
-            best_model.save(best_path_dir)
-        elif model == "AFTSurvivalTree":
-            best_path_dir = os.path.join(path, "best_model.json")
-            best_model.save(best_path_dir)
-        else:
-            best_path_dir = os.path.join(path, "best_model.pkl")
-            best_model.save(best_path_dir)
+        save_model(best_model, path, f"best_model_{model}")
 
     return c_indexes, brier_scores, maes
 
-def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, **model_params):
+def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, path_to_image=None, **model_params):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
     fold_c_indexes = []
     fold_brier_scores = []
@@ -101,7 +78,12 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
     
     index = 0
 
-    for train_index, val_index in tqdm(kf.split(x_train, y_train)):
+    if model != "XGBoostAFT":
+        y_death_train = y_train['death']
+    else:
+        y_death_train = [1 if x < np.inf else 0 for x in y_train['Survival_label_upper_bound']]
+
+    for train_index, val_index in tqdm(kf.split(x_train, y_death_train), desc="Cross-Validation Folds"):
         if model == "XGBoostAFT":
             x_train_fold, x_val_fold = x_train[train_index], x_train[val_index]
             y_train_fold, y_val_fold = y_train.iloc[train_index], y_train.iloc[val_index]
@@ -110,8 +92,9 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
             y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
 
         if model == "AFTForest":
+            print(f"Training AFTForest on fold {index+1} with params: {model_params}")
             params = {
-                'function': model_params.get('function', 'norm'),
+                'function': model_params.get('function', 'normal'),
                 'is_bootstrap': model_params.get('is_bootstrap', False),
                 'is_custom_dist': model_params.get('is_custom_dist', False),
                 'n_components': model_params.get('n_components', 1),
@@ -125,10 +108,11 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
                 'aggregator': model_params.get('aggregator', 'mean'),
                 'split_fitting': model_params.get('split_fitting', False),
             }
+            print("AFTForest params:", params)
             one_model = AFTForest(random_state=42, **model_params)
         elif model == "AFTSurvivalTree":
             params = {
-                'function': model_params.get('function', 'norm'),
+                'function': model_params.get('function', 'normal'),
                 'is_bootstrap': model_params.get('is_bootstrap', False),
                 'is_custom_dist': model_params.get('is_custom_dist', False),
                 'n_components': model_params.get('n_components', 1),
@@ -145,7 +129,7 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         elif model == "XGBoostAFT":
             params = {
                 'max_depth': model_params.get('max_depth', 6),
-                'function': model_params.get('function', 'norm'),
+                'function': model_params.get('function', 'normal'),
                 'sigma': model_params.get('sigma', 0.1),
                 'learning_rate': model_params.get('learning_rate', 0.05),
                 'lambda_': model_params.get('lambda_', 0.01),
@@ -174,26 +158,14 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         fold_brier_scores.append(brier_score)
         fold_maes.append(mae)
 
-        #print all averages 
         print(f"Fold {index+1} - C-Index: {c_index}, Brier Score: {brier_score}, MAE: {mae}")
 
-        # Check if this model is the best one
         if c_index > best_c_index:
             best_c_index = c_index
             best_model = one_model
 
         #save the model if needed
-        if model == "AFTForest":
-            path_dir = os.path.join(path, f"comb_{combinations_index+1}_fold_{index+1}")
-            if not os.path.exists(path_dir):
-                os.makedirs(path_dir)
-            one_model.save(path_dir)
-        elif model == "AFTSurvivalTree":
-            path_dir = os.path.join(path, f"comb_{combinations_index+1}_fold_{index+1}.json")
-            one_model.save(path_dir)
-        else:
-            path_dir = os.path.join(path, f"comb_{combinations_index+1}_fold_{index+1}.pkl")
-            one_model.save(path_dir)
+        save_model(one_model, path, f"model_fold_{index+1}_combi_{combinations_index+1}")
 
         index += 1
 
@@ -206,19 +178,14 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
 
         print(f"Best Model with test results - C-Index: {c_index_test}, Brier Score: {brier_score_test}, MAE: {mae_test}")
 
+        if path_to_image is not None:
+            print("Plotting survival trees...")
+            y_pred = best_model.predict(x_test)
+            plot_survival_trees(y_pred, y_test, path=path_to_image, dataset=model_params.get('dataset', 'veteran'), function=model_params.get('function', 'normal'), model=model, save=True, index=combinations_index+1)
+
     #Save the best model if needed
     if path is not None and best_model is not None:
-        if model == "AFTForest":
-            best_path_dir = os.path.join(path, f"best_model_combi_{combinations_index+1}")
-            if not os.path.exists(best_path_dir):
-                os.makedirs(best_path_dir)
-            best_model.save(best_path_dir)
-        elif model == "AFTSurvivalTree":
-            best_path_dir = os.path.join(path, f"best_model_combi_{combinations_index+1}.json")
-            best_model.save(best_path_dir)
-        else:
-            best_path_dir = os.path.join(path, f"best_model_combi_{combinations_index+1}.pkl")
-            best_model.save(best_path_dir)
+        save_model(best_model, path, f"best_model_combi_{combinations_index+1}")
         
     return fold_c_indexes, fold_brier_scores, fold_maes, c_index_test, brier_score_test, mae_test
 

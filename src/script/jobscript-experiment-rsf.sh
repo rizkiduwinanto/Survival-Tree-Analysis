@@ -33,7 +33,7 @@ CMD="python3 src/main_experiment.py \
     --n_tries=10 \
     --n_models=5 \
     --n_splits=5 \
-    --path=\"$TMPDIR/results/models/model\" \
+    --path=\"$TMPDIR/results\" \
     --path-res=\"$TMPDIR/results/${OUTPUT_FILE}\" \
     "
 
@@ -42,5 +42,5 @@ eval $CMD &
 wait
 
 mkdir -p /home4/$USER/job_${SLURM_JOBID}
-tar czvf /home4/$USER/job_${SLURM_JOBID}/models.tar.gz $TMPDIR/results/models
+tar czvf /home4/$USER/job_${SLURM_JOBID}/models.tar.gz $TMPDIR/results
 cp $TMPDIR/results/${OUTPUT_FILE} /home4/$USER/job_${SLURM_JOBID}/

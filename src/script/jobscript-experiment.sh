@@ -6,12 +6,12 @@
 #SBATCH --mem=16GB
 #SBATCH --partition=gpu
 #SBATCH --cpus-per-task=16
-#SBATCH --array=1-13
+#SBATCH --array=1-11
 
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
 
-export WANDB_API_KEY=<WANDB_API_KEY>
+export WANDB_API_KEY=792c7896914a8e8e361566d5bddddf821e40fc53
 
 wandb login
 
@@ -27,16 +27,6 @@ CONFIGURATIONS=(
     "extreme --no-is_custom_dist --no-is_bootstrap"
     "normal --no-is_custom_dist --no-is_bootstrap"
     "logistic --no-is_custom_dist --no-is_bootstrap"
-    "extreme --is_custom_dist --no-is_bootstrap"
-    "normal --is_custom_dist --no-is_bootstrap"
-    "logistic --is_custom_dist --no-is_bootstrap"
-    "weibull --is_custom_dist --no-is_bootstrap"
-    "gmm --is_custom_dist --no-is_bootstrap"
-    "extreme --is_custom_dist --is_bootstrap"
-    "normal --is_custom_dist --is_bootstrap"
-    "logistic --is_custom_dist --is_bootstrap"
-    "weibull --is_custom_dist --is_bootstrap"
-    "gmm --is_custom_dist --is_bootstrap"
 )
 
 IFS=' ' read -r FUNCTION FLAGS <<< "${CONFIGURATIONS[$SLURM_ARRAY_TASK_ID - 1]}"
