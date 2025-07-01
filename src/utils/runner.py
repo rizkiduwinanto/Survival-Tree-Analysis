@@ -19,6 +19,7 @@ np.random.seed(SEED)
 
 random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
 FIXED_N_TREES = [10, 20, 50, 70, 100] 
+PARAM_N_TREES = [10, 10, 10, 20, 20, 20, 50, 50, 70, 100, 10, 10, 10, 20, 20, 20, 50, 50, 70, 100]
 
 def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10, **model_params):
     c_indexes = []
@@ -192,7 +193,7 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
     param_grid = get_parameter(model, function, is_custom_dist, is_bootstrap)
     
     if model == "AFTForest":
-        sampled_n_trees = [random.choice(FIXED_N_TREES) for _ in range(n_tries)]
+        sampled_n_trees = [PARAM_N_TREES[i] for i in range(n_tries)]
 
     combinations = list(itertools.product(*param_grid.values()))
 

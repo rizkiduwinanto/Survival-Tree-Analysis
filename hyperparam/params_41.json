@@ -1,0 +1,14 @@
+{
+  "model": "AFTForest",
+  "dataset": "nhanes",
+  "function": "normal",
+  "is_bootstrap": false,
+  "is_custom_dist": false,
+  "split_fitting": true,
+  "max_depth": 3,
+  "min_samples_split": 50,
+  "min_samples_leaf": 100,
+  "sigma": 0.1,
+  "percent_len_sample_forest": 0.5,
+  "n_trees": 20
+}
