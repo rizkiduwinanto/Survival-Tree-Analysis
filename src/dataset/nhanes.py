@@ -41,6 +41,7 @@ class NHANESDataset(Dataset):
         label = pd.DataFrame()
         label['Survival_label_lower_bound'] = abs(self.label_shap)
         label['Survival_label_upper_bound'] = np.where(self.label_shap > 0, self.label_shap, np.inf)
+        label['death'] = [0 if x < 0 else 1 for x in self.label_shap]
         
         return label
 
@@ -57,11 +58,11 @@ class NHANESDataset(Dataset):
         return self.data
 
     def get_train_test(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, stratify=self.label["death"], random_state=random_state)
         return X_train, X_test, y_train, y_test
         
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, stratify=self.xgboost_label["death"], random_state=random_state)
         return X_train, X_test, y_train, y_test
     
     def convert_bool_to_int(self):

@@ -37,6 +37,7 @@ class SupportDataset(Dataset):
         self.temp["Survival_label_upper_bound"] = self.data.apply(
             lambda row: row["d.time"] if row["death"] == 0 else np.inf, axis=1
         )
+        self.temp["death"] = self.data["death"].astype('int')
 
         return self.temp
 
@@ -107,11 +108,11 @@ class SupportDataset(Dataset):
         return self.xgboost_label
 
     def get_train_test(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, stratify=self.label["death"], random_state=random_state)
         return X_train, X_test, y_train, y_test
 
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, stratify=self.xgboost_label["death"],  random_state=random_state)
         return X_train, X_test, y_train, y_test
 
     def get_data(self):
