@@ -12,5 +12,5 @@
   "n_trees": 70,
   "test_size": 0.2,
   "percent_len_sample": 0.5,
-  "n_samples": 200
+  "n_samples": 100
 }

@@ -11,7 +11,7 @@
   "percent_len_sample_forest": 0.25,
   "n_trees": 100,
   "test_size": 0.2,
-  "percent_len_sample": 0.75,
+  "percent_len_sample": 0.5,
   "n_samples": 100,
   "n_components": 1
 }
