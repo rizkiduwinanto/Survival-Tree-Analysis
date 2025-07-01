@@ -1,0 +1,14 @@
+{
+  "model": "AFTForest",
+  "dataset": "nhanes",
+  "function": "logistic",
+  "is_bootstrap": false,
+  "is_custom_dist": false,
+  "split_fitting": true,
+  "max_depth": 10,
+  "min_samples_split": 2,
+  "min_samples_leaf": 200,
+  "sigma": 1,
+  "percent_len_sample_forest": 0.37,
+  "n_trees": 100
+}

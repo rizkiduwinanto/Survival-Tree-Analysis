@@ -1,0 +1,17 @@
+{
+  "model": "AFTForest",
+  "dataset": "support",
+  "function": "gmm",
+  "is_bootstrap": true,
+  "is_custom_dist": true,
+  "split_fitting": false,
+  "max_depth": 10,
+  "min_samples_split": 2,
+  "min_samples_leaf": 100,
+  "percent_len_sample_forest": 0.5,
+  "n_trees": 70,
+  "test_size": 0.2,
+  "percent_len_sample": 1.0,
+  "n_samples": 200,
+  "n_components": 1
+}
