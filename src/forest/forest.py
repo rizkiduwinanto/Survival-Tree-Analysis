@@ -12,7 +12,8 @@ from utils.metrics.metrics import c_index, brier, auc, mae
 from concurrent.futures import ThreadPoolExecutor
 
 MAIN_FOLDER = "models/forest"
-MAX_GPU = 8  # Maximum number of GPU streams to use for parallel fitting
+MAX_GPU = 8
+MIN_GPU = 6
 
 class AFTForest():
     """
@@ -177,15 +178,18 @@ class AFTForest():
             preconditions:
             - The trees must be pre-fitted on the CPU if `split_fitting` is enabled.
         """
-        n_streams = min(self.n_trees, MAX_GPU)
+        if self.n_trees < 50:
+            n_streams = min(MIN_GPU, self.n_trees)
+        else:
+            n_streams = min(MAX_GPU, self.n_trees)
+
         streams = [cp.cuda.Stream() for _ in range(n_streams)]
 
         def worker(stream_idx):
-            for stream_idx in range(n_streams):
-                with streams[stream_idx]:
-                    for tree_idx in range(stream_idx, self.n_trees, n_streams):
-                        tree = self.trees[tree_idx]
-                        tree.special_fit()
+            with streams[stream_idx]:
+                for tree_idx in range(stream_idx, self.n_trees, n_streams):
+                    tree = self.trees[tree_idx]
+                    tree.special_fit()
 
         with ThreadPoolExecutor(max_workers=n_streams) as executor:
             executor.map(worker, range(n_streams))
@@ -253,12 +257,7 @@ class AFTForest():
             preds.append(tree.predict(X))
         np_preds = np.array(preds)
         np_preds = np_preds.flatten()
-
-        if self.is_geometric:
-            agg = np.exp(np.mean(np.log(np_preds)))
-        else:
-            agg = np.median(np_preds)
-
+        agg = np.median(np_preds)
         return agg
 
     def _score(self, X, y):

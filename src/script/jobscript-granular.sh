@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=Forest-experiment-granular
-#SBATCH --output=logs/Forest-experiment-granular_%j_%a.out
-#SBATCH --time=12:00:00
+#SBATCH --job-name=Forest-experiment-granular-edit
+#SBATCH --output=logs/Forest-experiment-granular-edit_%j_%a.out
+#SBATCH --time=24:00:00
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=16GB
 #SBATCH --partition=gpu
-#SBATCH --cpus-per-task=16
-#SBATCH --array=1-60
+#SBATCH --cpus-per-task=6
+#SBATCH --array=1-16
 
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
@@ -23,7 +23,7 @@ trap 'mkdir -p /home4/$USER/job_${SLURM_JOBID}
 tar czvf /home4/$USER/job_${SLURM_JOBID}/results.tar.gz $TMPDIR/results' 12
 
 INDEX=$SLURM_ARRAY_TASK_ID
-HYPERPARAM_FILE="hyperparam/params_$INDEX.json"
+HYPERPARAM_FILE="converted_hyperparam/params_$INDEX.json"
 
 CMD="python3 src/main_granular.py \
     --index=$INDEX \

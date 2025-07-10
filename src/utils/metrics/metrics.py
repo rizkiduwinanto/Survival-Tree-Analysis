@@ -70,5 +70,8 @@ def mae(pred_times, y):
     true_times = np.array([time for _, time in y])
     pred_times = np.array(pred_times)
 
+    finite_mask = np.isfinite(pred_times)
+    event_mask = event_mask & finite_mask
+
     mae = mean_absolute_error(true_times[event_mask], pred_times[event_mask])
     return mae
