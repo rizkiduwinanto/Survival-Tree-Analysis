@@ -239,9 +239,7 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
             run.config.update(params, allow_val_change=True)
 
         if is_cv:
-            x = np.concatenate([x_train, x_test], axis=0)
-            y = np.concatenate([y_train, y_test], axis=0)
-            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
+            c_indexes, briers, maes = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
         else:
             c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
         
