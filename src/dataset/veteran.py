@@ -36,6 +36,7 @@ class VeteranLungDataset(Dataset):
         label = pd.DataFrame()
         label['Survival_label_lower_bound'] = self.data['Survival_label_lower_bound']
         label['Survival_label_upper_bound'] = self.data['Survival_label_upper_bound']
+        label['death'] = [1 if x < np.inf else 0 for x in self.data['Survival_label_upper_bound']]
         return label
         
     def get_label(self):
@@ -45,11 +46,11 @@ class VeteranLungDataset(Dataset):
         return self.xgboost_label
 
     def get_train_test(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, stratify=self.label["death"], random_state=42)
         return X_train, X_test, y_train, y_test
 
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, stratify=self.label["death"], random_state=42)
         return X_train, X_test, y_train, y_test
 
     def get_data(self):

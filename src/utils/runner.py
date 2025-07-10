@@ -1,4 +1,4 @@
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from tqdm import tqdm
 import itertools
 import numpy as np
@@ -19,6 +19,7 @@ np.random.seed(SEED)
 
 random_seeds = [0, 42, 123, 456, 789, 101112, 131415, 161718, 192021, 222324]
 FIXED_N_TREES = [10, 20, 50, 70, 100] 
+PARAM_N_TREES = [10, 10, 10, 20, 20, 20, 50, 50, 70, 100, 10, 10, 10, 20, 20, 20, 50, 50, 70, 100]
 
 def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10, **model_params):
     c_indexes = []
@@ -64,7 +65,7 @@ def run_n_models(model, x_train, y_train, x_test, y_test, path=None, n_models=10
     return c_indexes, brier_scores, maes
 
 def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, n_splits=5, path=None, path_to_image=None, **model_params):
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_seeds[0])
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
     fold_c_indexes = []
     fold_brier_scores = []
     fold_maes = []
@@ -78,12 +79,7 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
     
     index = 0
 
-    if model != "XGBoostAFT":
-        y_death_train = y_train['death']
-    else:
-        y_death_train = [1 if x < np.inf else 0 for x in y_train['Survival_label_upper_bound']]
-
-    for train_index, val_index in tqdm(kf.split(x_train, y_death_train), desc="Cross-Validation Folds"):
+    for train_index, val_index in tqdm(skf.split(x_train, y_train['death']), desc="Cross-Validation Folds"):
         if model == "XGBoostAFT":
             x_train_fold, x_val_fold = x_train[train_index], x_train[val_index]
             y_train_fold, y_val_fold = y_train.iloc[train_index], y_train.iloc[val_index]
@@ -197,7 +193,7 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
     param_grid = get_parameter(model, function, is_custom_dist, is_bootstrap)
     
     if model == "AFTForest":
-        sampled_n_trees = [random.choice(FIXED_N_TREES) for _ in range(n_tries)]
+        sampled_n_trees = [PARAM_N_TREES[i] for i in range(n_tries)]
 
     combinations = list(itertools.product(*param_grid.values()))
 

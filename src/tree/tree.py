@@ -84,7 +84,7 @@ class AFTSurvivalTree():
         self.X_train = None
         self.y_death_train = None
         self.y_time_train = None
-        self.is_geometric = False  # This is not used in the current implementation, but can be set if needed
+        self.is_geometric = True  # This is not used in the current implementation, but can be set if needed
 
         if is_custom_dist:
             if function == "weibull":
