@@ -238,35 +238,22 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
 
             run.config.update(params, allow_val_change=True)
 
-            if is_cv:
-                c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
-            else:
-                c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
-
-            run.log({
-                'c_index': c_indexes,
-                'brier_score': briers,
-                'mae': maes,
-                'mean_c_index': np.mean(c_indexes),
-                'mean_brier_score': np.mean(briers),
-                'mean_mae': np.mean(maes),
-                'c_index_test': c_index_test if is_cv else None,
-                'brier_score_test': brier_test if is_cv else None,
-                'mae_test': mae_test if is_cv else None,
-            })
-            
-            results.append({
-                'hyperparams': hyperparam_dict,
-                'c_index': c_indexes,
-                'brier_score': briers,
-                'mae': maes,
-                'mean_c_index': np.mean(c_indexes),
-                'mean_brier_score': np.mean(briers),
-                'mean_mae': np.mean(maes),
-                'c_index_test': c_index_test if is_cv else None,
-                'brier_score_test': brier_test if is_cv else None,
-                'mae_test': mae_test if is_cv else None,
-            })
+        if is_cv:
+            x = np.concatenate([x_train, x_test], axis=0)
+            y = np.concatenate([y_train, y_test], axis=0)
+            c_indexes, briers, maes = cross_validate(model, x, y, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
+        else:
+            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
+        
+        results.append({
+            'hyperparams': hyperparam_dict,
+            'c_index': c_indexes,
+            'brier_score': briers,
+            'mae': maes,
+            'mean_c_index': np.mean(c_indexes),
+            'mean_brier_score': np.mean(briers),
+            'mean_mae': np.mean(maes)
+        })
 
             combinations_index += 1
 
