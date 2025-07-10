@@ -21,8 +21,6 @@ def convert_hyperparam(path_to_read, model="AFTForest", is_to_gmm=False, start_i
     model = hyperparameter_sets['model']
     dataset = hyperparameter_sets['dataset']
     function = hyperparameter_sets['function']
-    is_bootstrap = hyperparameter_sets.get('is_bootstrap', False)
-    is_custom_dist = hyperparameter_sets.get('is_custom_dist', False)
     split_fitting = hyperparameter_sets.get('split_fitting', False)
     max_depth = hyperparameter_sets.get('max_depth', None)
     min_samples_split = hyperparameter_sets.get('min_samples_split', None)
@@ -34,12 +32,10 @@ def convert_hyperparam(path_to_read, model="AFTForest", is_to_gmm=False, start_i
     param_grid_bootstrap = get_parameter(model, 'gmm', True, True)
 
     combinations_custom_dist = list(itertools.product(*param_grid_custom_dist.values()))
-    random.shuffle(combinations_custom_dist)
 
     custom_dist_dict = dict(zip(param_grid_custom_dist.keys(), combinations_custom_dist[0]))
 
     combinations_bootstrap = list(itertools.product(*param_grid_bootstrap.values()))
-    random.shuffle(combinations_bootstrap)
 
     bootstrap_dict = dict(zip(param_grid_bootstrap.keys(), combinations_bootstrap[0]))
 

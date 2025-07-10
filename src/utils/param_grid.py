@@ -25,7 +25,7 @@ gmm_param_grid = {
 
 xgboost_param_grid = {
     'max_depth': [3, 6, 10],
-    'sigma': [0.01, 0.1, 1, 10],
+    'sigma': [0.1, 0.5, 1, 5, 10, 50],
     'learning_rate': [0.01, 0.05, 0.1],
     'lambda_': [0.01, 0.1, 1],
     'alpha': [0.01, 0.1, 1],
