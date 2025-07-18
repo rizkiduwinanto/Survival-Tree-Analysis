@@ -24,7 +24,7 @@ class SupportDataset(Dataset):
         self.data = self.data.to_numpy()
 
     def create_label(self):
-        self.data["death"] = self.data["death"].astype('bool')
+        self.data["death"] = self.data["death"]
         label = self.data[["death", "d.time"]]
         record = label.to_records(index=False)
         structured_arr = np.stack(record, axis=0)

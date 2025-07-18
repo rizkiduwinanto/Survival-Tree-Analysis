@@ -8,6 +8,7 @@ from dataset.veteran import VeteranLungDataset
 from dataset.support import SupportDataset
 from dataset.nhanes import NHANESDataset
 from sklearn.model_selection import train_test_split
+from utils.utils import plot_survival_trees
 import time
 import argparse
 
@@ -42,6 +43,8 @@ def run(args):
     learning_rate = args[22]
     num_boost_round = args[23]
     early_stopping_rounds = args[24]
+    is_visualize = args[25]
+    path_to_image = args[26]
 
     print("Type: ", type_algo)
     print("Dataset: ", dataset)
@@ -68,6 +71,8 @@ def run(args):
     print("Learning rate: ", learning_rate)
     print("Num boost round: ", num_boost_round)
     print("Early stopping rounds: ", early_stopping_rounds)
+    print("Is visualize: ", is_visualize)
+    print("Path to image: ", path_to_image)
 
     if dataset.lower() == "veteran":
         df = pd.read_csv('data/veterans_lung_cancer.csv')
@@ -132,6 +137,11 @@ def run(args):
 
         path = aft_forest.save(path_to_save)
         print("Path: ", path)
+
+        if is_visualize:
+            y_pred = aft_forest.predict(X_test)
+            plot_survival_trees(y_pred, y_test, path=path_to_image, dataset=dataset.lower(), function=function, model=type_algo.lower(), save=True, index=None)
+
     elif type_algo.lower() == "afttree":
         aft_tree = AFTSurvivalTree(
             function=function.lower(), 
@@ -157,7 +167,14 @@ def run(args):
         print("Score: ", score)
 
         aft_tree.save(path_to_save)
-        aft_tree._visualize(f'decision_tree/{path_to_save}.png')
+        print("Path: ", path_to_save)
+
+        if is_visualize:
+            y_pred = aft_tree.predict(X_test)
+            plot_survival_trees(y_pred, y_test, path=path_to_image, dataset=dataset.lower(), function=function, model=type_algo.lower(), save=True, index=None)
+
+        aft_tree_test = AFTSurvivalTree.load(path_to_save)
+        print("Score after loading: ", aft_tree_test._score(X_test, y_test))
 
     elif type_algo.lower() == "xgboostaft":
         xgboost_aft = XGBoostAFTWrapper(
@@ -233,6 +250,8 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', type=float, default=0.05, help='Learning rate for XGBoost AFT')
     parser.add_argument('--num_boost_round', type=int, default=1000, help='Number of boosting rounds for XGBoost AFT')
     parser.add_argument('--early_stopping_rounds', type=int, default=10, help='Early stopping rounds for XGBoost AFT')
+    parser.add_argument('--is_visualize', action=argparse.BooleanOptionalAction, help='Visualize the tree')
+    parser.add_argument('--path-image', type=str, default='calibration.png', help='Path to save the tree image')
     
     args = parser.parse_args()
 
@@ -261,5 +280,7 @@ if __name__ == "__main__":
         args.alpha,
         args.learning_rate,
         args.num_boost_round,
-        args.early_stopping_rounds
+        args.early_stopping_rounds,
+        args.is_visualize,
+        args.path_image
     ])

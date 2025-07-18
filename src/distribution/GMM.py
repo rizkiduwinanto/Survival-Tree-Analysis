@@ -187,4 +187,15 @@ class GMM_New(Distribution):
         self.means_cdf_ = np.array(params['means_cdf'])
         self.covariances_cdf_ = np.array(params['covariances_cdf'])
         self.weights_cdf_ = np.array(params['weights_cdf'])
+
+    def get_median_survival_time(self):
+        """
+        Get the median survival time
+        """
+        if self.means_ is not None:
+            median_times = np.exp(self.means_)
+            return np.median(median_times)
+        else:
+            warnings.warn("Model has not been fitted yet.", ApproximationWarning)
+            return None
         

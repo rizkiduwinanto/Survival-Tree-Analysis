@@ -32,10 +32,13 @@ def generate_hyperparam(model="AFTForest", n_tries=10, dry_run=False, basic=Fals
                     ]
                 
                 for bootstrap, custom_dist in dist_combinations:
-                    idx = get_hyperparam(n_tries, dataset_name, model, function_name, 
-                                    bootstrap, custom_dist, idx, default_output_dir)
-                    print(f"Generated {n_tries} hyperparams for {dataset_name} with {function_name}, "
-                        f"bootstrap={bootstrap}, custom_dist={custom_dist}. Total: {idx}")
+                    tries_per_sub_combo = max(1, n_tries // len(dist_combinations))
+                    idx = get_hyperparam(
+                        tries_per_sub_combo, dataset_name, model, function_name, 
+                        bootstrap, custom_dist, idx, default_output_dir
+                    )
+                    print(f"Generated {tries_per_sub_combo} hyperparams for {dataset_name} with {function_name}, "
+                          f"bootstrap={bootstrap}, custom_dist={custom_dist}. Total: {idx}")
             else:
                 idx = get_hyperparam(n_tries, dataset_name, model, function_name, 
                                     False, False, idx, default_output_dir)
@@ -50,6 +53,11 @@ def get_hyperparam(n_tries, dataset, model, function, is_bootstrap, is_custom_di
 
     combination_indices = np.random.choice(len(combinations), size=n_tries, replace=False)
     combinations = [combinations[i] for i in combination_indices]
+
+    if len(combinations) >= n_tries:
+        selected_combinations = random.sample(combinations, n_tries)
+    else:
+        selected_combinations = [random.choice(combinations) for _ in range(n_tries)]
 
     for idx, hyperparams in enumerate(combinations):
         hyperparams_dict = dict(zip(param_grid.keys(), hyperparams))

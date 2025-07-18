@@ -239,7 +239,7 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
             run.config.update(params, allow_val_change=True)
 
         if is_cv:
-            c_indexes, briers, maes = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
+            c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
         else:
             c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
         
@@ -250,10 +250,13 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
             'mae': maes,
             'mean_c_index': np.mean(c_indexes),
             'mean_brier_score': np.mean(briers),
-            'mean_mae': np.mean(maes)
+            'mean_mae': np.mean(maes),
+            'c_index_test': c_index_test if is_cv else None,
+            'brier_score_test': brier_test if is_cv else None,
+            'mae_test': mae_test if is_cv else None
         })
 
-            combinations_index += 1
+        combinations_index += 1
 
     return results
     

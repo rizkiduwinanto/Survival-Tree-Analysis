@@ -115,3 +115,9 @@ class LogExtremeNew(Distribution):
         """
         self.scale_ = params['scale']
         self.scale_cdf_ = params['scale_cdf']
+
+    def get_median_survival_time(self):
+        """
+        Get the median survival time
+        """
+        return self.scale_ * np.log(2)

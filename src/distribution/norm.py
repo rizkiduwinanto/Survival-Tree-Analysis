@@ -111,3 +111,9 @@ class LogNormal(Distribution):
         """
         self.mu_ = params['mu']
         self.sigma_ = params['sigma']
+
+    def get_median_survival_time(self):
+        """
+        Get the median survival time
+        """
+        return self.fitter.median_survival_time_

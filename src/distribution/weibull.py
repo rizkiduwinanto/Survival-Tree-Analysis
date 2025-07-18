@@ -128,3 +128,9 @@ class Weibull(Distribution):
         """
         self.rho_ = params['rho']
         self.lambda_ = params['lambda']
+
+    def get_median_survival_time(self):
+        """
+        Get the median survival time
+        """
+        return self.fitter.median_survival_time_

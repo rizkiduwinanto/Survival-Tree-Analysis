@@ -73,6 +73,7 @@ class AFTSurvivalTree():
         self.epsilon = 10e-12
         self.function = function.lower()
         self.custom_dist = None
+        self.custom_dist_leaf = None
         self.is_bootstrap = is_bootstrap
         self.is_custom_dist = is_custom_dist
         self.n_samples = n_samples
@@ -85,6 +86,7 @@ class AFTSurvivalTree():
         self.y_death_train = None
         self.y_time_train = None
         self.is_geometric = True  # This is not used in the current implementation, but can be set if needed
+        self.heteregenous = True  # This is not used in the current implementation, but can be set if needed
 
         if is_custom_dist:
             if function == "weibull":
@@ -99,6 +101,13 @@ class AFTSurvivalTree():
                 self.custom_dist = GMM_New(n_components=n_components)
             else:
                 raise ValueError("Custom distribution not supported")
+            
+        if function == "normal":
+            self.custom_dist_leaf = LogNormal()
+        elif function == "logistic":
+            self.custom_dist_leaf = LogLogistic()
+        else:
+            self.custom_dist_leaf = Weibull()
 
     def fit(self, X, y, random_state=42):
         """
@@ -154,6 +163,14 @@ class AFTSurvivalTree():
             self.build_tree_bfs(X_gpu, y_death_gpu, y_time_gpu)
         elif self.mode == "dfs":
             self.build_tree_dfs(X_gpu, y_death_gpu, y_time_gpu)
+
+        if self.heteregenous:
+            self.set_value_tree_heterogenous(self.tree)
+        else:
+            if self.is_geometric:
+                self.set_value_tree_geometric(self.tree)
+            else:
+                self.set_value_tree_median(self.tree)
         return
 
     def prefit(self, X, y, random_state=None):
@@ -221,8 +238,9 @@ class AFTSurvivalTree():
             Current depth of the tree. Default is 0.
         :return: TreeNode
         """
+        
         if depth > self.max_depth or len(y_time) < self.min_samples_split:
-            node = TreeNode(None, None, self.set_leaf_value(y_time, y_death), None, None, num_sample=len(y_time))
+            node = TreeNode(None, None, None, None, None, num_sample=len(y_time), y_time=y_time, y_death=y_death)
             if depth == 0: 
                 self.tree = node
             return node
@@ -230,7 +248,7 @@ class AFTSurvivalTree():
         split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X, y_death, y_time)
 
         if split is None and feature is None:
-            node = TreeNode(None, None, self.set_leaf_value(y_time, y_death), None, None, num_sample=len(y_time))
+            node = TreeNode(None, None, None, None, None, num_sample=len(y_time), y_time=y_time, y_death=y_death)
             if depth == 0: 
                 self.tree = node
             return node
@@ -244,20 +262,20 @@ class AFTSurvivalTree():
         
 
         if len(y_time_left) == 0 or len(y_time_right) == 0:
-            node = TreeNode(None, None, self.set_leaf_value(y_time, y_death, None, None, num_sample=len(y_time)))
+            node = TreeNode(None, None, None, None, None, num_sample=len(y_time), y_time=y_time, y_death=y_death)
             if depth == 0: 
                 self.tree = node
             return node
 
         if cp.all(y_death_left == 0) or cp.all(y_death_right == 0):
             # If all samples in one side are censored, we cannot split further
-            node = TreeNode(feature, None, self.set_leaf_value(y_time, y_death), None, None, num_sample=len(y_time))
+            node = TreeNode(feature, None, None, None, None, num_sample=len(y_time), y_time=y_time, y_death=y_death)
             if depth == 0:
                 self.tree = node
             return node
 
         if len(X_left) < self.min_samples_leaf or len(X_right) < self.min_samples_leaf:
-            node = TreeNode(feature, None, self.set_leaf_value(y_time, y_death), None, None, num_sample=len(y_time))
+            node = TreeNode(feature, None, None, None, None, num_sample=len(y_time), y_time=y_time, y_death=y_death)
             if depth == 0:
                 self.tree = node
             return node
@@ -265,7 +283,7 @@ class AFTSurvivalTree():
         left = self.build_tree(X_left, y_death_left, y_time_left, depth+1)
         right = self.build_tree(X_right, y_death_right, y_time_right, depth+1)
     
-        node = TreeNode(feature, split, None, left, right, loss=loss, num_sample=len(y_time))
+        node = TreeNode(feature, split, None, left, right, loss=loss, num_sample=len(y_time), y_time=None, y_death=None)
         if depth == 0:
             self.tree = node
         return node
@@ -304,13 +322,13 @@ class AFTSurvivalTree():
             parent_node = current_node['parent_node']
 
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
             
             split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_death_current, y_time_current)
 
             if split is None and feature is None:
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
 
             X_left = X[left_indices]
@@ -321,15 +339,15 @@ class AFTSurvivalTree():
             y_time_right = y_time[right_indices]
 
             if len(X_left) == 0 or len(X_right) == 0:
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
 
             if cp.all(y_death_left == 0) or cp.all(y_death_right == 0): 
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
 
             if (len(y_time_left) < self.min_samples_leaf) or (len(y_time_right) < self.min_samples_leaf):
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
             else:
                 parent_node.set_feature_index(feature)
                 parent_node.set_threshold(split)
@@ -390,13 +408,13 @@ class AFTSurvivalTree():
             parent_node = current_node['parent_node']
 
             if depth > self.max_depth or len(y_time_current) < self.min_samples_split:
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
             
             split, feature, left_indices, right_indices, loss = self.get_best_split_vectorized(X_current, y_death_current, y_time_current)
 
             if split is None and feature is None:
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
 
             X_left = X[left_indices]
@@ -407,15 +425,15 @@ class AFTSurvivalTree():
             y_time_right = y_time[right_indices]
 
             if len(X_left) == 0 or len(X_right) == 0:
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
 
             if cp.all(y_death_left == 0) or cp.all(y_death_right == 0): 
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
                 continue
 
             if (len(y_time_left) < self.min_samples_leaf) or (len(y_time_right) < self.min_samples_leaf):
-                parent_node.set_value(self.set_leaf_value(y_time_current, y_death_current))
+                parent_node.set_node(y_time=y_time_current, y_death=y_death_current)
             else:
                 parent_node.set_feature_index(feature)
                 parent_node.set_threshold(split)
@@ -443,26 +461,9 @@ class AFTSurvivalTree():
 
         return self.tree
 
-    def set_leaf_value(self, y_time_current, y_death_current):
-        """
-        Set the value of the node based on the survival times.
-        :param y_time_current: array-like, shape (n_samples,)
-            Array of survival times.
-        :return: None
-        """
-        
-        events = y_time_current[y_death_current == 1]
-
-        if self.is_geometric:
-            mean_value = cp.mean(cp.log(events))
-            if self.function != "extreme":
-                value = cp.exp(mean_value)
-            else:
-                value = cp.exp(mean_value + self.sigma * cp.log(cp.log(2)))
-
-            return value
-        else:
-            return cp.median(events)
+    def define_value_heterogeneous(self, y_time_current, y_death_current):
+        self.custom_dist_leaf._fit(y_time_current.get(), y_death_current.get())
+        return self.custom_dist_leaf.get_median_survival_time()
 
     def get_best_split_vectorized(self, X, y_death, y_time):
         """
@@ -634,6 +635,45 @@ class AFTSurvivalTree():
         """
         return cp.median(y)
 
+    def set_value_tree_median(self, tree=None):
+        """
+            Set the value of the tree nodes to the median survival time.
+            This is used for heterogeneous data where each node can have a different distribution.
+        """
+        if self.tree is None:
+            raise ValueError("Tree has not been built. Call `fit` first.")
+
+        if tree.is_leaf():
+            tree.set_leaf_value_median()
+        else:
+            self.set_value_tree_median(tree.left)
+            self.set_value_tree_median(tree.right)
+
+    def set_value_tree_geometric(self, tree=None):
+        """
+            Set the value of the tree nodes to the geometric mean survival time.
+            This is used for heterogeneous data where each node can have a different distribution.
+        """
+        if self.tree is None:
+            raise ValueError("Tree has not been built. Call `fit` first.")
+
+        if self.tree.is_leaf():
+            tree.set_leaf_value_geometric()
+        else:
+            self.set_value_tree_geometric(tree.left)
+            self.set_value_tree_geometric(tree.right)
+
+    def set_value_tree_heterogenous(self, tree=None):
+        """
+        Set the value of the tree nodes to the value calculated by the custom distribution.
+        This is used for heterogeneous data where each node can have a different distribution.
+        """
+        if tree.is_leaf():
+            tree.set_value(self.define_value_heterogeneous(tree.y_time, tree.y_death))
+        else:
+            self.set_value_tree_heterogenous(tree.left)
+            self.set_value_tree_heterogenous(tree.right)
+
     def predict(self, X):
         """
             Predict the survival time for the input samples X.
@@ -654,11 +694,11 @@ class AFTSurvivalTree():
             return: float, the predicted time  
         """
         try:
-            if tree.value is not None:
-                if isinstance(tree.value, cp.ndarray):
-                    return tree.value.get()
-                else:
+            if tree.is_leaf():
+                if tree.value is not None:
                     return tree.value
+                else:
+                    return 0
             else:
                 feature_value = X[tree.feature_index]
                 if feature_value <= tree.threshold:
@@ -667,6 +707,19 @@ class AFTSurvivalTree():
                     return self.get_prediction(X, tree.right)
         except:
             raise ValueError("Error in get_prediction")
+
+    def calculate_value_node(self, X):
+        """
+            Calculate the value for the input samples X.
+            param: X: np.ndarray, shape (n_samples, n_features)
+            return: np.ndarray, shape (n_samples,), the calculated values
+        """
+        if self.tree is None:
+            raise ValueError("Tree has not been built. Call `fit` first.")
+        if isinstance(X, np.ndarray) and len(X.shape) == 1:
+            X = X.reshape(1, -1)
+        values = [self.get_value(x, self.tree) for x in X]
+        return values
 
     def _print(self):
         """
