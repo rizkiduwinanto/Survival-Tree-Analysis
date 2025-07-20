@@ -224,6 +224,15 @@ class AFTSurvivalTree():
             self.build_tree_bfs(X_gpu, y_death_gpu, y_time_gpu)
         elif self.mode == "dfs":
             self.build_tree_dfs(X_gpu, y_death_gpu, y_time_gpu)
+
+        if self.heteregenous:
+            self.set_value_tree_heterogenous(self.tree)
+        else:
+            if self.is_geometric:
+                self.set_value_tree_geometric(self.tree)
+            else:
+                self.set_value_tree_median(self.tree)
+
         return
 
     def build_tree(self, X, y_death, y_time, depth=0):   
