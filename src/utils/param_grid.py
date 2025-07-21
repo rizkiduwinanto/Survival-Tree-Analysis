@@ -40,7 +40,7 @@ scikit_param_grid = {
     'min_samples_leaf': [1, 2]
 }
 
-def get_parameter(model, function, is_custom_dist, is_bootstrap):
+def get_parameter(model):
     if model == "AFTForest":
         param_grid = forest_param_grid
         if is_custom_dist and not is_bootstrap:
@@ -62,4 +62,22 @@ def get_parameter(model, function, is_custom_dist, is_bootstrap):
     elif model == "RandomSurvivalForest":
         param_grid = scikit_param_grid
 
+    return param_grid
+
+def get_all_parameter(model):
+    if model == "AFTForest":
+        param_grid = {
+            **forest_param_grid,
+            **custom_fitting_param_grid,
+            **boostrap_param_grid,
+            **gmm_param_grid
+        
+        }
+    elif model == "AFTSurvivalTree":
+        param_grid = {
+            **tree_param_grid,
+            **custom_fitting_param_grid,
+            **boostrap_param_grid,
+            **gmm_param_grid
+        }      
     return param_grid
