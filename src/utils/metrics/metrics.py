@@ -14,7 +14,9 @@ def c_index(pred_times, y):
     event_observed = [1 if event_occurred else 0 for event_occurred, _ in y]
     times_true = [time for _, time in y]
 
-    c_index = concordance_index(times_true, pred_times, event_observed)
+    pred_times = np.array(pred_times)
+    times_true = np.array(times_true)
+    c_index = concordance_index(times_true, -pred_times, event_observed)
     return c_index
 
 def brier(pred_times, y):
