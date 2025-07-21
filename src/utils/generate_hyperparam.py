@@ -8,7 +8,7 @@ import os
 SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
-FIXED_N_TREES = [10, 50, 100, 150] 
+FIXED_N_TREES = [50, 100, 150] 
 default_output_dir = "hyperparam"
 
 def generate_hyperparam(model="AFTForest", n_tries=10, dry_run=False, basic=False, default_output_dir=default_output_dir):
