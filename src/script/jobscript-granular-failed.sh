@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=Forest-experiment-granular-edit
-#SBATCH --output=logs/Forest-experiment-granular-edit_%j_%a.out
-#SBATCH --time=23:00:00
+#SBATCH --job-name=Forest-experiment-granular-retry
+#SBATCH --output=logs/Forest-experiment-granula-retry_%j_%a.out
+#SBATCH --time=48:00:00
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=16GB
 #SBATCH --partition=gpu
 #SBATCH --cpus-per-task=6
-#SBATCH --array=1-30
+#SBATCH --array=1-2
 
 module load CUDA/12.4.0
 source /home4/$USER/venvs/umcg_env/bin/activate
@@ -22,7 +22,9 @@ cd $TMPDIR/Survival-Tree-Analysis
 trap 'mkdir -p /home4/$USER/job_${SLURM_JOBID}
 tar czvf /home4/$USER/job_${SLURM_JOBID}/results.tar.gz $TMPDIR/results' 12
 
-INDEX=$SLURM_ARRAY_TASK_ID
+FAILED_INDEX=(31 43)
+
+INDEX=${FAILED_INDEX[$SLURM_ARRAY_TASK_ID - 1]}
 HYPERPARAM_FILE="hyperparam/params_$INDEX.json"
 
 CMD="python3 src/main_granular.py \

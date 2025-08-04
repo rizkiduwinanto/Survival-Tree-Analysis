@@ -5,10 +5,14 @@
   "is_bootstrap": false,
   "is_custom_dist": false,
   "split_fitting": true,
-  "max_depth": 10,
-  "min_samples_split": 2,
-  "min_samples_leaf": 10,
+  "max_depth": 3,
+  "min_samples_split": 10,
+  "min_samples_leaf": 200,
   "sigma": 0.5,
-  "percent_len_sample_forest": 0.5,
+  "percent_len_sample_forest": 0.25,
+  "test_size": 0.2,
+  "percent_len_sample": 0.75,
+  "n_samples": 200,
+  "n_components": 5,
   "n_trees": 50
 }

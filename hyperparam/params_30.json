@@ -6,9 +6,13 @@
   "is_custom_dist": false,
   "split_fitting": false,
   "max_depth": 6,
-  "min_samples_split": 50,
-  "min_samples_leaf": 5,
-  "sigma": 10,
+  "min_samples_split": 2,
+  "min_samples_leaf": 1,
+  "sigma": 0.5,
   "percent_len_sample_forest": 0.75,
-  "n_trees": 20
+  "test_size": 0.1,
+  "percent_len_sample": 0.5,
+  "n_samples": 200,
+  "n_components": 5,
+  "n_trees": 50
 }

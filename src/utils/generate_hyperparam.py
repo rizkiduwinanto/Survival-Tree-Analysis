@@ -45,7 +45,7 @@ def generate_hyperparam(model="AFTForest", n_tries=10, dry_run=False, basic=Fals
                         'function': function_name,
                         'is_bootstrap': is_bootstrap,
                         'is_custom_dist': is_custom_dist,
-                        'split_fitting': False,
+                        'split_fitting': True if dataset_name == 'nhanes' else False,
                         **hyperparams
                     }
                     
