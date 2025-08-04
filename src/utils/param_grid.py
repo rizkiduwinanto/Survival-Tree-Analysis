@@ -20,7 +20,7 @@ boostrap_param_grid = {
 }
 
 gmm_param_grid = {
-    'n_components': [1, 2, 5, 10],
+    'n_components': [5, 10],
 }
 
 xgboost_param_grid = {
@@ -40,7 +40,7 @@ scikit_param_grid = {
     'min_samples_leaf': [1, 2]
 }
 
-def get_parameter(model):
+def get_parameter(model, function='gmm', is_bootstrap=False, is_custom_dist=False):
     if model == "AFTForest":
         param_grid = forest_param_grid
         if is_custom_dist and not is_bootstrap:

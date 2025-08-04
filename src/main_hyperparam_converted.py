@@ -4,7 +4,7 @@ def run():
     idx = 0
 
     idx = convert_hyperparam(
-        path_to_read="hyperparam/params_26.json",
+        path_to_read="hyperparam/params_49.json",
         model="AFTForest",
         is_to_gmm=True,
         start_idx=idx,
@@ -12,7 +12,31 @@ def run():
     )
 
     idx = convert_hyperparam(
+        path_to_read="hyperparam/params_54.json",
+        model="AFTForest",
+        is_to_gmm=False,
+        start_idx=idx,
+        default_output_dir="converted_hyperparam"
+    )
+
+    idx = convert_hyperparam(
+        path_to_read="hyperparam/params_31.json",
+        model="AFTForest",
+        is_to_gmm=False,
+        start_idx=idx,
+        default_output_dir="converted_hyperparam"
+    )
+
+    idx = convert_hyperparam(
         path_to_read="hyperparam/params_19.json",
+        model="AFTForest",
+        is_to_gmm=True,
+        start_idx=idx,
+        default_output_dir="converted_hyperparam"
+    )
+
+    idx = convert_hyperparam(
+        path_to_read="hyperparam/params_28.json",
         model="AFTForest",
         is_to_gmm=False,
         start_idx=idx,
@@ -21,30 +45,6 @@ def run():
 
     idx = convert_hyperparam(
         path_to_read="hyperparam/params_8.json",
-        model="AFTForest",
-        is_to_gmm=False,
-        start_idx=idx,
-        default_output_dir="converted_hyperparam"
-    )
-
-    idx = convert_hyperparam(
-        path_to_read="hyperparam/params_37.json",
-        model="AFTForest",
-        is_to_gmm=True,
-        start_idx=idx,
-        default_output_dir="converted_hyperparam"
-    )
-
-    idx = convert_hyperparam(
-        path_to_read="hyperparam/params_46.json",
-        model="AFTForest",
-        is_to_gmm=False,
-        start_idx=idx,
-        default_output_dir="converted_hyperparam"
-    )
-
-    idx = convert_hyperparam(
-        path_to_read="hyperparam/params_51.json",
         model="AFTForest",
         is_to_gmm=False,
         start_idx=idx,
