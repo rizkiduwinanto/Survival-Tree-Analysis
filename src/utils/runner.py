@@ -79,7 +79,11 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
     
     index = 0
 
-    for train_index, val_index in tqdm(skf.split(x_train, y_train['death']), desc="Cross-Validation Folds"):
+    time_bins = np.quantile(y_train['d.time'][y_train['death'] == 1], q=[0.25, 0.5, 0.75])
+    y_strata = np.digitize(y_train['d.time'], bins=time_bins)
+    y_strata[y_train['death'] == 0] = len(time_bins) + 1
+
+    for train_index, val_index in tqdm(skf.split(x_train, y_strata), desc="Cross-Validation Folds"):
         if model == "XGBoostAFT":
             x_train_fold, x_val_fold = x_train[train_index], x_train[val_index]
             y_train_fold, y_val_fold = y_train.iloc[train_index], y_train.iloc[val_index]
