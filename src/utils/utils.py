@@ -41,6 +41,42 @@ def stratified_gpu_train_test_split(X, y_death, y_time, test_size=0.2, random_st
     test_idx = cp.concatenate((uncensored_test_idx, censored_test_idx))
 
     return X[train_idx], y_death[train_idx], y_time[train_idx], X[test_idx], y_death[test_idx], y_time[test_idx]
+
+def stratified_time_gpu_train_test_split(X, y_death, y_time, test_size=0.2, random_state=None):
+    cp.random.seed(random_state)
+    
+    uncensored_mask = (y_death == 1)
+    uncensored_times = y_time[uncensored_mask]
+    
+    time_bins = cp.quantile(uncensored_times, q=[0.25, 0.5, 0.75])
+    
+    strata = cp.zeros_like(y_death, dtype=cp.int32)
+    
+    strata[uncensored_mask] = cp.digitize(uncensored_times, bins=time_bins) + 1
+    
+    strata[~uncensored_mask] = 0
+    
+    unique_strata = cp.unique(strata)
+    train_idx = []
+    test_idx = []
+    
+    for stratum in unique_strata:
+        stratum_indices = cp.where(strata == stratum)[0]
+        stratum_count = len(stratum_indices)
+        test_count = int(stratum_count * test_size)
+        
+        shuffled_indices = cp.random.permutation(stratum_indices)
+        
+        test_idx.append(shuffled_indices[:test_count])
+        train_idx.append(shuffled_indices[test_count:])
+    
+    train_idx = cp.concatenate(train_idx)
+    test_idx = cp.concatenate(test_idx)
+    
+    train_idx = cp.random.permutation(train_idx)
+    test_idx = cp.random.permutation(test_idx)
+    
+    return X[train_idx], y_death[train_idx], y_time[train_idx], X[test_idx], y_death[test_idx], y_time[test_idx]
     
 def plot_survival_trees(pred_times, y, dataset=None, function=None, model=None, save=False, path=None, index=None):
     """

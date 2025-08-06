@@ -187,7 +187,7 @@ def cross_validate(model, x_train, y_train, x_test, y_test, combinations_index, 
         
     return fold_c_indexes, fold_brier_scores, fold_maes, c_index_test, brier_score_test, mae_test
 
-def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, **kwargs):
+def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_models=5, n_splits=5, is_grid=False, is_cv=False, path=None, path_image=None, **kwargs):
     results =[]
 
     function = kwargs.get('function', 'normal')
@@ -243,7 +243,7 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
             run.config.update(params, allow_val_change=True)
 
         if is_cv:
-            c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, **params)
+            c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, path_to_image=path_image, **params)
         else:
             c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
         

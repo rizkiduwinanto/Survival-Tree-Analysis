@@ -7,7 +7,7 @@ from distribution.logistic import LogLogistic
 from distribution.extreme import LogExtremeNew
 from distribution.GMM import GMM_New
 from utils.math.math_utils_gpu import norm_pdf, norm_cdf, logistic_pdf, logistic_cdf, extreme_pdf, extreme_cdf
-from utils.utils import stratified_gpu_train_test_split
+from utils.utils import stratified_time_gpu_train_test_split
 import graphviz
 import uuid
 import json
@@ -86,7 +86,7 @@ class AFTSurvivalTree():
         self.y_death_train = None
         self.y_time_train = None
         self.is_geometric = True  # This is not used in the current implementation, but can be set if needed
-        self.heteregenous = True  # This is not used in the current implementation, but can be set if needed
+        self.heteregenous = False  # This is not used in the current implementation, but can be set if needed
 
         if is_custom_dist:
             if function == "weibull":
@@ -136,13 +136,14 @@ class AFTSurvivalTree():
                 y_time_gpu = cp.asarray(y['d.time'])
 
                 ## If bootstrap sampling is not enabled, split the dataset into training and distribution sets
-                X_train, y_death_train, y_time_train, X_dist, y_death_dist, y_time_dist = stratified_gpu_train_test_split(X_gpu, y_death_gpu, y_time_gpu, test_size=self.test_size, random_state=random_state)
+                X_train, y_death_train, y_time_train, X_dist, y_death_dist, y_time_dist = stratified_time_gpu_train_test_split(X_gpu, y_death_gpu, y_time_gpu, test_size=self.test_size, random_state=random_state)
 
+                y_death_dist = cp.asarray(y_death_dist)
                 y_death_dist_cpu = cp.asnumpy(y_death_dist)
                 y_time_dist_cpu = cp.asnumpy(y_time_dist)
 
                 y_dist = np.rec.fromarrays([y_death_dist_cpu, y_time_dist_cpu], names=['death', 'd.time'])
-
+                
                 self.custom_dist.fit(y_dist)
 
                 X_gpu = X_train
@@ -649,7 +650,7 @@ class AFTSurvivalTree():
             Set the value of the tree nodes to the median survival time.
             This is used for heterogeneous data where each node can have a different distribution.
         """
-        if self.tree is None:
+        if tree is None:
             raise ValueError("Tree has not been built. Call `fit` first.")
 
         if tree.is_leaf():
@@ -663,10 +664,10 @@ class AFTSurvivalTree():
             Set the value of the tree nodes to the geometric mean survival time.
             This is used for heterogeneous data where each node can have a different distribution.
         """
-        if self.tree is None:
+        if tree is None:
             raise ValueError("Tree has not been built. Call `fit` first.")
 
-        if self.tree.is_leaf():
+        if tree.is_leaf():
             tree.set_leaf_value_geometric()
         else:
             self.set_value_tree_geometric(tree.left)

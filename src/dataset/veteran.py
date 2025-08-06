@@ -45,12 +45,25 @@ class VeteranLungDataset(Dataset):
     def get_xgboost_label(self):
         return self.xgboost_label
 
+    def create_strata(self):
+        event_times = self.label['d.time'][self.label['death'] == 1]
+        time_bins = np.quantile(event_times, q=[0.25, 0.5, 0.75])
+        strata = np.zeros(len(self.label), dtype=int)
+        strata[self.label['death'] == 1] = np.digitize(
+            self.label['d.time'][self.label['death'] == 1],
+            bins=time_bins
+        ) + 1 
+        strata[self.label['death'] == 0] = 0
+        return strata
+
     def get_train_test(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, stratify=self.label["death"], random_state=42)
+        strata = self.create_strata()
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.label, test_size=test_size, stratify=strata, random_state=42)
         return X_train, X_test, y_train, y_test
 
     def get_train_test_xgboost(self, test_size=0.2, random_state=42):
-        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, stratify=self.label["death"], random_state=42)
+        strata = self.create_strata()
+        X_train, X_test, y_train, y_test = train_test_split(self.data, self.xgboost_label, test_size=test_size, stratify=strata, random_state=42)
         return X_train, X_test, y_train, y_test
 
     def get_data(self):

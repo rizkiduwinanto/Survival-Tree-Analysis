@@ -25,6 +25,7 @@ def run(args):
     is_custom_dist = args[11]
     aggregator = args[12]
     is_split_fitting = args[13]
+    path_image = args[14]
 
     if dataset.lower() == "veteran":
         df = pd.read_csv('data/veterans_lung_cancer.csv')
@@ -75,6 +76,7 @@ def run(args):
         is_grid=is_grid,
         is_cv=is_cv,
         path=path_to_save,
+        path_image=path_image,
         **fixed_params
     )
 
@@ -97,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('--is_custom_dist', action=argparse.BooleanOptionalAction, help='Is custom distribution')
     parser.add_argument('--aggregator', type=str, default='mean', help='Aggregator function for AFTForest')
     parser.add_argument('--is_split_fitting', action=argparse.BooleanOptionalAction, help='Is split fitting')
+    parser.add_argument('--path-image', type=str, default='calibration-1.png', help='Path to save the tree image')
 
     args = parser.parse_args()
 
@@ -114,7 +117,8 @@ if __name__ == "__main__":
         args.is_bootstrap,
         args.is_custom_dist,
         args.aggregator,
-        args.is_split_fitting
+        args.is_split_fitting,
+        args.path_image
     ])
 
 
