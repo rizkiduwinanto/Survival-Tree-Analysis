@@ -45,7 +45,7 @@ def tune_model_granular(
 
     with wandb.init(
         entity="rizkiduwinanto-university-of-groningen",
-        project="random-forest-aft-last-try-geometric",
+        project="random-forest-aft-last-battle-submission-geo",
         notes="thesis",
         tags=[model, function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist", dataset],
         config=params,
