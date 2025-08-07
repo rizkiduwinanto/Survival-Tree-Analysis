@@ -9,6 +9,7 @@ from wrapper.xgboost_aft.xgboost_aft import XGBoostAFTWrapper
 from wrapper.random_survival_forest_scikit.random_survival_forest import RandomSurvivalForestWrapper
 from utils.param_grid import get_parameter
 from utils.utils import save_model, plot_survival_trees
+from utils.utils import dump_results_to_csv
 import os
 import wandb
 
@@ -211,56 +212,77 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
             
     combinations_index = 0
 
-    with wandb.init(
-        entity="rizkiduwinanto-university-of-groningen",
-        project="random-forest-aft-comparison",
-        notes="thesis",
-        tags=[model, function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist", dataset]
-    ) as run:
-        for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
-            hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
+    for hyperparams in tqdm(combinations, desc="Tuning Hyperparameters"):
+        hyperparam_dict = dict(zip(param_grid.keys(), hyperparams))
 
-            if model == "AFTForest":
-                hyperparam_dict['n_trees'] = sampled_n_trees[combinations_index]
+        if model == "AFTForest":
+            hyperparam_dict['n_trees'] = sampled_n_trees[combinations_index]
 
-            params = {
-                **hyperparam_dict,
-                'function': kwargs.get('function', 'normal'),
-                'is_bootstrap': kwargs.get('is_bootstrap', False),
-                'is_custom_dist': kwargs.get('is_custom_dist', False),
-                'aggregator': kwargs.get('aggregator', 'mean'),
+        params = {
+            **hyperparam_dict,
+            'function': kwargs.get('function', 'normal'),
+            'is_bootstrap': kwargs.get('is_bootstrap', False),
+            'is_custom_dist': kwargs.get('is_custom_dist', False),
+            'aggregator': kwargs.get('aggregator', 'mean'),
+            'dataset': dataset,
+        }
+
+        if model == "AFTForest":
+            params = { 
+                **params,
+                'split_fitting': kwargs.get('is_split_fitting', False),
             }
-
-            if model == "AFTForest":
-                params = { 
-                    **params,
-                    'split_fitting': kwargs.get('is_split_fitting', False),
-                }
-
-
-            print("Hyperparameters:", params)
-
-            run.config.update(params, allow_val_change=True)
-
-        if is_cv:
-            c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, path_to_image=path_image, **params)
-        else:
-            c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
         
-        results.append({
-            'hyperparams': hyperparam_dict,
-            'c_index': c_indexes,
-            'brier_score': briers,
-            'mae': maes,
-            'mean_c_index': np.mean(c_indexes),
-            'mean_brier_score': np.mean(briers),
-            'mean_mae': np.mean(maes),
-            'c_index_test': c_index_test if is_cv else None,
-            'brier_score_test': brier_test if is_cv else None,
-            'mae_test': mae_test if is_cv else None
-        })
+        with wandb.init(
+            entity="rizkiduwinanto-university-of-groningen",
+            project="random-forest-aft-xgboost-fix",
+            notes="thesis",
+            tags=[model, function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist", dataset],
+            config=params,
+        ) as run:
+            path_to_image = os.path.join(path_image, f"{model}_{function}_{dataset}_combi_{combinations_index+1}") if path_image else None
 
-        combinations_index += 1
+            if is_cv:
+                c_indexes, briers, maes, c_index_test, brier_test, mae_test = cross_validate(model, x_train, y_train, x_test, y_test, combinations_index=combinations_index, n_splits=n_splits, path=path, path_to_image=path_to_image, **params)
+            else:
+                c_indexes, briers, maes = run_n_models(model, x_train, y_train, x_test, y_test, n_models=n_models, path=path, **params)
+            
+            run.log({
+                'c_index': c_indexes,
+                'brier_score': briers,
+                'mae': maes,
+                'mean_c_index': np.mean(c_indexes),
+                'mean_brier_score': np.mean(briers),
+                'mean_mae': np.mean(maes),
+                'c_index_test': c_index_test if is_cv else None,
+                'brier_score_test': brier_test if is_cv else None,
+                'mae_test': mae_test if is_cv else None,
+            })
+
+            results.append({
+                'params': params,
+                'c_index': c_indexes,
+                'brier_score': briers,
+                'mae': maes,
+                'mean_c_index': np.mean(c_indexes),
+                'mean_brier_score': np.mean(briers),
+                'mean_mae': np.mean(maes),
+                'c_index_test': c_index_test if is_cv else None,
+                'brier_score_test': brier_test if is_cv else None,
+                'mae_test': mae_test if is_cv else None,
+                'index': combinations_index + 1,
+            })
+
+            combinations_index += 1
+        
+        if path:
+            os.makedirs(path, exist_ok=True)
+            params = dict(params)
+            params.pop('dataset', None)
+            params.pop('model', None)
+            params.pop('index', None)
+
+            dump_results_to_csv(results, os.path.join(path, f"results_{model}_{function}_{dataset}.csv"))
 
     return results
     
