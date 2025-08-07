@@ -34,10 +34,10 @@ xgboost_param_grid = {
 }
 
 scikit_param_grid = {
-    'n_trees': [10, 20, 50, 100],
-    'max_depth': [5, 10, 15],
-    'min_samples_split': [2, 5],
-    'min_samples_leaf': [1, 2]
+    'n_trees': [50, 100, 150],
+    'max_depth': [3, 6, 10],
+    'min_samples_split': [2, 10, 50, 100, 200],
+    'min_samples_leaf': [1, 2, 5, 10, 50, 100, 200]
 }
 
 def get_parameter(model, function='gmm', is_bootstrap=False, is_custom_dist=False):

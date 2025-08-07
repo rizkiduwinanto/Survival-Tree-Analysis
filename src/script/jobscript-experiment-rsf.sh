@@ -35,6 +35,7 @@ CMD="python3 src/main_experiment.py \
     --n_splits=5 \
     --path=\"$TMPDIR/results\" \
     --path-res=\"$TMPDIR/results/${OUTPUT_FILE}\" \
+    --path-image=\"$TMPDIR/results\" \
     "
 
 echo "Command: $CMD"
