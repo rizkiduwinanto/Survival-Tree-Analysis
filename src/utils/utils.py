@@ -87,11 +87,14 @@ def plot_survival_trees(pred_times, y, dataset=None, function=None, model=None, 
     y_pred: list of tuples (censored, time)
         The predicted survival times and censoring information.
     """
-    y_true = np.array([time for _, time in y])
-    y_pred = np.array(pred_times)
-    censored = np.array([not death for death, _ in y])
+    if model == "XGBoostAFT":
+        y_true = np.array(y['d.time'])
+        censored = np.array(y['death'] == 0)
+    else:
+        y_true = np.array([time for _, time in y])
+        censored = np.array([not death for death, _ in y])
 
-    print(f"y_true: {y_true.shape}, y_pred: {y_pred.shape}, censored: {censored.shape}")
+    y_pred = np.array(pred_times)
 
     uncensored = ~censored
 
@@ -102,6 +105,9 @@ def plot_survival_trees(pred_times, y, dataset=None, function=None, model=None, 
 
     lims = [min(y_true.min(), y_pred.min()), max(y_true.max(), y_pred.max())]
     ax.plot(lims, lims, 'r--', label='Perfect Prediction')
+
+    if model == "XGBoostAFT":
+        y = np.array(list(zip(censored, y_true)), dtype=[('censored', bool), ('time', float)])
 
     mae_ = mae(y_pred, y)
 

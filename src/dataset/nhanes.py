@@ -42,6 +42,7 @@ class NHANESDataset(Dataset):
         label['Survival_label_lower_bound'] = abs(self.label_shap)
         label['Survival_label_upper_bound'] = np.where(self.label_shap > 0, self.label_shap, np.inf)
         label['death'] = [0 if x < 0 else 1 for x in self.label_shap]
+        label['d.time'] = abs(self.label_shap)
         
         return label
 

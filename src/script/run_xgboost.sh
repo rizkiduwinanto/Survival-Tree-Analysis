@@ -13,6 +13,7 @@ for DATASET in "${DATASETS[@]}"; do
 
         OUTPUT_FILE="${OUTPUT_BASE}/xgboost_${FUNC}_${DATASET}.csv"
         MODEL_DIR="${OUTPUT_BASE}/xgboost_${FUNC}_${DATASET}"
+        IMAGE_DIR="${OUTPUT_BASE}/xgboost_${FUNC}_${DATASET}"
         
         # Create model directory
         mkdir -p "$MODEL_DIR"
@@ -28,7 +29,8 @@ for DATASET in "${DATASETS[@]}"; do
             --n_tries=10 \
             --n_models=5 \
             --path-res="$OUTPUT_FILE" \
-            --path="$MODEL_DIR"
+            --path="$MODEL_DIR" \
+            --path-image="$IMAGE_DIR" \
         
         # Check if command succeeded
         if [ $? -eq 0 ]; then
