@@ -1,17 +1,17 @@
-\begin{tabular}{lcccc}
-\toprule
-Function & Custom Distribution & C-Index Test & Brier Score Test & MAE Test \\
-\midrule
-Extreme & No & 0.527 & 0.554 & 194.668 \\
-Extreme & Yes & 0.524 & 0.554 & 194.633 \\
-Extreme & Yes & 0.526 & 0.554 & 194.653 \\
-Gmm & Yes & 0.548 & 0.554 & 194.436 \\
-Gmm & Yes & 0.555 & 0.554 & 194.490 \\
-Logistic & No & 0.548 & 0.554 & 194.506 \\
-Logistic & Yes & 0.564 & 0.554 & 194.373 \\
-Logistic & Yes & 0.506 & 0.554 & 194.784 \\
-Normal & No & 0.527 & 0.554 & 194.624 \\
-Normal & Yes & 0.518 & 0.554 & 194.511 \\
-Normal & Yes & 0.568 & 0.554 & 194.317 \\
-\bottomrule
+\begin{table}[h!]
+\centering
+\caption{Test Performance of Models using Support Dataset with and without custom distribution.}
+\label{tab:test_performance_support_1}
+\begin{tabular}{l|c|c|c|c}
+\hline
+\textbf{Function} & \textbf{Custom Distribution} & \textbf{C-Index Test} & \textbf{Brier Score Test} & \textbf{MAE Test} \\
+\hline
+Extreme & No & 0.557 & \textbf{0.550} & 192.264 \\
+Extreme & Yes & \textbf{0.580} & 0.550 & \textbf{191.945} \\
+Logistic & No & 0.553 & 0.550 & 192.284 \\
+Logistic & Yes & 0.525 & 0.550 & 192.310 \\
+Normal & No & 0.541 & 0.550 & 192.311 \\
+Normal & Yes & 0.475 & 0.550 & 192.368 \\
+\hline
 \end{tabular}
+\end{table}

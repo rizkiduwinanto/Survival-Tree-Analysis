@@ -1,9 +1,14 @@
-\begin{tabular}{lccc}
-\toprule
-Model & C-Index & Brier Score & MAE \\
-\midrule
-XGBoost & 0.769 ± 0.008 & 0.432 ± 0.004 & 260.928 ± 11.53 \\
-RSF & 0.681 ± 0.01 & 0.394 ± 0.011 & 732.0 ± 23.718 \\
-AFT Forest & 0.534 ± 0.027 & 0.546 ± 0.009 & 185.764 ± 13.06 \\
-\bottomrule
+\begin{table}[h!]
+\centering
+\caption{Performance of Models using Support Dataset from 5 Cross Validation}
+\label{tab:performance_support}
+\begin{tabular}{l|c|c|c}
+\hline
+\textbf{Model} & \textbf{C-Index} & \textbf{Brier Score} & \textbf{MAE} \\
+\hline
+XGBoost & \textbf{0.764 ± 0.004} & 0.437 ± 0.004 & 270.095 ± 18.444 \\
+RSF & 0.675 ± 0.01 & \textbf{0.376 ± 0.005} & 308.655 ± 19.796 \\
+AFT Forest & 0.574 ± 0.008 & 0.547 ± 0.008 & \textbf{186.031 ± 3.9} \\
+\hline
 \end{tabular}
+\end{table}

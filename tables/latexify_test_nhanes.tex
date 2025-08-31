@@ -1,9 +1,14 @@
-\begin{tabular}{lccc}
-\toprule
-Model & C-Index & Brier Score & MAE \\
-\midrule
-XGBoost & 0.810 & 0.148 & 8631.273 \\
-RSF & 0.772 & 0.147 & 3.165 \\
-AFT Forest & 0.785 & 0.390 & 4.776 \\
-\bottomrule
+\begin{table}[h!]
+\centering
+\caption{Testing Performance of Models using Nhanes Dataset from 5 Cross Validation}
+\label{tab:test_performance_nhanes}
+\begin{tabular}{l|c|c|c}
+\hline
+\textbf{Model} & \textbf{C-Index} & \textbf{Brier Score} & \textbf{MAE} \\
+\hline
+XGBoost & \textbf{0.814} & 0.164 & 13.440 \\
+RSF & 0.765 & \textbf{0.141} & 7.303 \\
+AFT Forest & 0.771 & 0.478 & \textbf{5.034} \\
+\hline
 \end{tabular}
+\end{table}

@@ -1,17 +1,17 @@
-\begin{tabular}{lcccc}
-\toprule
-Function & Custom Distribution & C-Index Test & Brier Score Test & MAE Test \\
-\midrule
-Extreme & No & 0.785 & 0.390 & 4.776 \\
-Extreme & Yes & 0.748 & 0.398 & 4.792 \\
-Extreme & Yes & 0.642 & 0.383 & 4.724 \\
-Gmm & Yes & 0.750 & 0.363 & 4.687 \\
-Gmm & Yes & 0.753 & 0.383 & 4.759 \\
-Logistic & No & 0.734 & 0.416 & 4.930 \\
-Logistic & Yes & 0.730 & 0.408 & 4.895 \\
-Logistic & Yes & 0.745 & 0.404 & 4.925 \\
-Normal & No & 0.764 & 0.368 & 4.693 \\
-Normal & Yes & 0.725 & 0.364 & 4.692 \\
-Normal & Yes & 0.705 & 0.366 & 4.685 \\
-\bottomrule
+\begin{table}[h!]
+\centering
+\caption{Test Performance of Models using Nhanes Dataset with and without custom distribution.}
+\label{tab:test_performance_nhanes_1}
+\begin{tabular}{l|c|c|c|c}
+\hline
+\textbf{Function} & \textbf{Custom Distribution} & \textbf{C-Index Test} & \textbf{Brier Score Test} & \textbf{MAE Test} \\
+\hline
+Extreme & No & 0.733 & 0.485 & 5.085 \\
+Extreme & Yes & 0.706 & 0.482 & 5.042 \\
+Logistic & No & 0.701 & 0.482 & 5.057 \\
+Logistic & Yes & \textbf{0.771} & \textbf{0.478} & \textbf{5.034} \\
+Normal & No & 0.638 & 0.482 & 5.040 \\
+Normal & Yes & 0.655 & 0.482 & 5.061 \\
+\hline
 \end{tabular}
+\end{table}

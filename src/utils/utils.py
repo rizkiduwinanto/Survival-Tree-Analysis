@@ -4,6 +4,7 @@ import pandas as pd
 import cupy as cp
 import os
 from .metrics.metrics import mae
+from scipy.stats import norm
 
 def gpu_train_test_split(X, y_death, y_time, test_size=0.2, random_state=None):
     n_samples = X.shape[0]
@@ -78,7 +79,18 @@ def stratified_time_gpu_train_test_split(X, y_death, y_time, test_size=0.2, rand
     
     return X[train_idx], y_death[train_idx], y_time[train_idx], X[test_idx], y_death[test_idx], y_time[test_idx]
     
-def plot_survival_trees(pred_times, y, dataset=None, function=None, model=None, save=False, path=None, index=None):
+def plot_survival_trees(
+    pred_times, 
+    y, 
+    dataset=None, 
+    function=None, 
+    model=None, 
+    save=False,
+    path=None, 
+    index=None,
+    show_mae=False,
+    custom_path=None,
+):
     """
     Plot the survival curves for the predicted and true survival times.
     Parameters:
@@ -111,28 +123,37 @@ def plot_survival_trees(pred_times, y, dataset=None, function=None, model=None, 
 
     mae_ = mae(y_pred, y)
 
-    if dataset is not None and function is not None and model is not None:
-        ax.set_title(f'True vs Predicted Survival Times\n in {dataset} with {model} - {function}\nMAE: {mae_:.2f}')
-    ax.set_title(f'True vs Predicted Survival Times\nMAE: {mae_:.2f}')
+    if show_mae:
+        if (dataset is not None and function is not None and model is not None):
+            ax.set_title(f'True vs Predicted Survival Times\n in {dataset} with {model} - {function}\nMAE: {mae_:.2f}')
+        else:
+            ax.set_title(f'True vs Predicted Survival Times\nMAE: {mae_:.2f}')
+    else:
+        ax.set_title(f'True vs Predicted Survival Times\n in {dataset} with {model}')
 
-    if dataset is not None and dataset == "nhanes":
+    if dataset is not None and dataset.lower() == "nhanes":
         ax.set_xlabel('True survival time (years)')
         ax.set_ylabel('Predicted survival time (years)')
     else:
         ax.set_xlabel('True survival time (days)')
         ax.set_ylabel('Predicted survival time (days)')
+
     ax.grid(True, linestyle="--", alpha=0.7)
-    ax.legend()
-    plt.tight_layout()
+
+    # Legend outside
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    plt.tight_layout(rect=[0, 0, 0.85, 1])  # leave space for legend
+
     if save:
         if path is not None:
             os.makedirs(path, exist_ok=True)
             if index is not None:
-                plt.savefig(os.path.join(path, f'survival_tree_{model}_{function}_{index}.png'))
+                plt.savefig(os.path.join(path, f'survival_tree_{model}_{function}_{index}.png'), bbox_inches='tight')
             else:
-                plt.savefig(os.path.join(path, f'survival_tree_{model}_{function}.png'))
+                plt.savefig(os.path.join(path, f'survival_tree_{model}_{dataset.lower()}.png'), bbox_inches='tight')
         else:
-            plt.savefig('calibration.png')
+            plt.savefig('calibration.png', bbox_inches='tight')
     else:
         plt.show()
 

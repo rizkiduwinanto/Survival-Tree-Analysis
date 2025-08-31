@@ -67,7 +67,7 @@ class AFTForest():
         ]
 
         self.n_trees = n_trees
-        self.is_geometric = False  # This is not used in the current implementation, but can be set if needed
+        self.is_geometric = True # This is not used in the current implementation, but can be set if needed
 
     # Tuning search for hyperparameters 
     def _get_params(self, **kwargs):

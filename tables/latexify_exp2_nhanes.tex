@@ -1,17 +1,22 @@
-\begin{tabular}{lccccc}
-\toprule
-Function & Custom Distribution & Bootstrap & C-Index & Brier Score & MAE \\
-\midrule
-Extreme & No & No & 0.64 ± 0.098 & 0.381 ± 0.007 & 4.661 ± 0.102 \\
-Extreme & Yes & No & 0.559 ± 0.117 & 0.374 ± 0.014 & 4.687 ± 0.095 \\
-Extreme & Yes & Yes & 0.578 ± 0.069 & 0.384 ± 0.007 & 4.689 ± 0.107 \\
-Gmm & Yes & No & 0.543 ± 0.173 & 0.378 ± 0.013 & 4.665 ± 0.097 \\
-Gmm & Yes & Yes & 0.605 ± 0.106 & 0.376 ± 0.006 & 4.666 ± 0.097 \\
-Logistic & No & No & 0.632 ± 0.097 & 0.405 ± 0.02 & 4.75 ± 0.098 \\
-Logistic & Yes & No & 0.518 ± 0.166 & 0.376 ± 0.024 & 4.773 ± 0.103 \\
-Logistic & Yes & Yes & 0.515 ± 0.156 & 0.386 ± 0.022 & 4.742 ± 0.11 \\
-Normal & No & No & 0.633 ± 0.095 & 0.37 ± 0.002 & 4.66 ± 0.114 \\
-Normal & Yes & No & 0.555 ± 0.135 & 0.37 ± 0.005 & 4.67 ± 0.107 \\
-Normal & Yes & Yes & 0.551 ± 0.107 & 0.374 ± 0.003 & 4.668 ± 0.114 \\
-\bottomrule
+\begin{table}[h!]
+\centering
+\caption{Performance of Models using Nhanes Dataset from 5-fold Cross Validation with and without bootstrapping.}
+\label{tab:model_performance_nhanes_2}
+\begin{tabular}{l|c|c|c|c|c}
+\hline
+\textbf{Function} & \textbf{Custom Distribution} & \textbf{Bootstrap} & \textbf{C-Index} & \textbf{Brier Score} & \textbf{MAE} \\
+\hline
+Extreme & No & No & 0.555 ± 0.169 & 0.484 ± 0.006 & 5.026 ± 0.03 \\
+Extreme & Yes & No & 0.488 ± 0.165 & 0.482 ± 0.006 & 5.018 ± 0.029 \\
+Extreme & Yes & Yes & 0.483 ± 0.15 & 0.483 ± 0.006 & 5.027 ± 0.024 \\
+Gmm & Yes & No & 0.439 ± 0.12 & 0.483 ± 0.005 & 5.024 ± 0.03 \\
+Gmm & Yes & Yes & 0.397 ± 0.122 & 0.485 ± 0.005 & 5.022 ± 0.025 \\
+Logistic & No & No & 0.464 ± 0.155 & 0.483 ± 0.006 & \textbf{5.014 ± 0.024} \\
+Logistic & Yes & No & \textbf{0.699 ± 0.068} & \textbf{0.482 ± 0.005} & 5.019 ± 0.025 \\
+Logistic & Yes & Yes & 0.548 ± 0.131 & 0.483 ± 0.006 & 5.023 ± 0.024 \\
+Normal & No & No & 0.468 ± 0.146 & 0.484 ± 0.006 & 5.021 ± 0.03 \\
+Normal & Yes & No & 0.505 ± 0.177 & 0.484 ± 0.005 & 5.021 ± 0.029 \\
+Normal & Yes & Yes & 0.409 ± 0.092 & 0.484 ± 0.006 & 5.02 ± 0.025 \\
+\hline
 \end{tabular}
+\end{table}

@@ -28,7 +28,7 @@ def run():
     )
 
     idx = convert_hyperparam(
-        path_to_read="hyperparam/params_19.json",
+        path_to_read="hyperparam/params_9.json",
         model="AFTForest",
         is_to_gmm=True,
         start_idx=idx,
@@ -36,7 +36,7 @@ def run():
     )
 
     idx = convert_hyperparam(
-        path_to_read="hyperparam/params_28.json",
+        path_to_read="hyperparam/params_19.json",
         model="AFTForest",
         is_to_gmm=False,
         start_idx=idx,
@@ -44,7 +44,7 @@ def run():
     )
 
     idx = convert_hyperparam(
-        path_to_read="hyperparam/params_8.json",
+        path_to_read="hyperparam/params_25.json",
         model="AFTForest",
         is_to_gmm=False,
         start_idx=idx,

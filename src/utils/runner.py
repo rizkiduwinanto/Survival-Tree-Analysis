@@ -235,7 +235,7 @@ def tune_model(model, dataset, x_train, y_train, x_test, y_test, n_tries=5, n_mo
         
         with wandb.init(
             entity="rizkiduwinanto-university-of-groningen",
-            project="random-forest-aft-rsf-fix",
+            project="random-forest-aft-xgboost-fix-2",
             notes="thesis",
             tags=[model, function, "bootstrap" if is_bootstrap else "no_bootstrap", "custom_dist" if is_custom_dist else "no_custom_dist", dataset],
             config=params,
